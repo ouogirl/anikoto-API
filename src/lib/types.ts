@@ -141,11 +141,21 @@ export interface FilterParams {
   page?: string;
 }
 
+export interface FilterOptions {
+  genres: string[];
+  years: string[];
+  types: string[];
+  seasons: string[];
+  statuses: string[];
+  sorts: string[];
+}
+
 export interface FilterResult {
   results: AnimeCard[];
   currentPage: number;
   hasNextPage: boolean;
   params: FilterParams;
+  options?: FilterOptions;
 }
 
 // ─── Schedule ────────────────────────────────────────────────────────────────

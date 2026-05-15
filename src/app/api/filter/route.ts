@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { scrapeFilter } from '@/lib/scrapers/search.scraper';
 import { FilterParams } from '@/lib/types';
 import { getOrSet } from '@/lib/cache';
-import { CACHE_TTL } from '@/lib/constants';
+import { CACHE_TTL, FILTER_OPTIONS } from '@/lib/constants';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +53,8 @@ export async function GET(req: Request) {
     const data = refresh
       ? await scrapeFilter(params)
       : await getOrSet(cacheKey, () => scrapeFilter(params), CACHE_TTL.FILTER);
+
+    data.options = FILTER_OPTIONS;
 
     return NextResponse.json({ ok: true, data });
   } catch (err: unknown) {
