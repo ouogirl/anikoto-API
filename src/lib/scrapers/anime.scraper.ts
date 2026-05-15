@@ -72,6 +72,8 @@ export async function scrapeAnimeDetail(slug: string): Promise<AnimeDetail> {
     return $(el).clone().children().remove().end().text().trim().toLowerCase().startsWith('episode');
   }).find('span').text().trim();
 
+  const episodes = await scrapeAnimeEpisodes(slug);
+
   return {
     id: animeId,
     slug,
@@ -95,6 +97,7 @@ export async function scrapeAnimeDetail(slug: string): Promise<AnimeDetail> {
     studios,
     producers,
     watchUrl: animeUrl || `${BASE_URL}/watch/${slug}`,
+    episodes,
   };
 }
 

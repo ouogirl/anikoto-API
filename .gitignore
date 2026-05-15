@@ -45,3 +45,5 @@ AGENTS.md
 CLAUDE.md
 
 extractor.js
+test_episodes.js
+test_schedule.js
