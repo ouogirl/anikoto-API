@@ -100,6 +100,26 @@ export default function HomePage() {
       params: [{ name: "refresh", type: "string", optional: true, desc: "Set to 1 to bypass cache" }],
       example: "/api/schedule",
     },
+    {
+      method: "GET",
+      path: "/api/watch/:slug",
+      description: "Get streaming servers and direct m3u8 URLs (with proxy & subtitles) for a specific episode.",
+      params: [
+        { name: "slug", type: "string", optional: false, desc: "Anime slug from the URL" },
+        { name: "ep", type: "string", optional: false, desc: "Episode number to watch" },
+      ],
+      example: "/api/watch/haibara-s-teenage-new-game-8axzw?ep=1",
+    },
+    {
+      method: "GET",
+      path: "/api/proxy",
+      description: "Internal streaming proxy to bypass Cloudflare and CORS restrictions for m3u8 video streams and subtitles.",
+      params: [
+        { name: "url", type: "string", optional: false, desc: "The target m3u8 or subtitle URL to proxy" },
+        { name: "referer", type: "string", optional: true, desc: "The referer header to bypass hotlink protection" },
+      ],
+      example: "/api/proxy?url=https%3A%2F%2Fcdn.mewstream.buzz%2F...%2Fmaster.m3u8&referer=https%3A%2F%2Fmegaplay.buzz%2F",
+    },
   ];
 
   const responseShape = `{
@@ -165,7 +185,7 @@ export default function HomePage() {
           A high-performance REST API for scraping anime data from <strong style={{ color: "#c7d2fe" }}>anikototv.to</strong> — built with Next.js, Cheerio, and in-memory caching.
         </p>
         <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-          {["10 Endpoints", "In-Memory Cache", "TypeScript"].map((badge) => (
+          {["12 Endpoints", "In-Memory Cache", "TypeScript"].map((badge) => (
             <span key={badge} style={{
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,255,255,0.1)",
