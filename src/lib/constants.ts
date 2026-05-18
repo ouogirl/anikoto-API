@@ -1,4 +1,4 @@
-export const BASE_URL = 'https://anikototv.to';
+export const BASE_URL = 'https://anikoto.net';
 
 export const DEFAULT_HEADERS = {
   'User-Agent':
@@ -9,7 +9,7 @@ export const DEFAULT_HEADERS = {
   'Accept-Encoding': 'gzip, deflate, br',
   Connection: 'keep-alive',
   'Cache-Control': 'no-cache',
-  Referer: 'https://anikototv.to/',
+  Referer: 'https://anikoto.net/',
 };
 
 /** Cache TTL in seconds */

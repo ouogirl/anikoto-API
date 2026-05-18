@@ -44,6 +44,18 @@ export async function GET(req: Request) {
       const baseUrl = new URL(targetUrl);
       
       const rewrittenText = text.split('\n').map(line => {
+        // Rewrite URI attributes in tags (e.g. #EXT-X-KEY:URI="...", #EXT-X-MAP:URI="...", #EXT-X-MEDIA:URI="...")
+        if (line.includes('URI=')) {
+          line = line.replace(/URI=["']([^"']+)["']/g, (match, uri) => {
+            let keyUrl = uri;
+            if (!keyUrl.startsWith('http')) {
+              keyUrl = new URL(keyUrl, baseUrl).toString();
+            }
+            const proxied = `/api/proxy?url=${encodeURIComponent(keyUrl)}&referer=${encodeURIComponent(referer || '')}`;
+            return `URI="${proxied}"`;
+          });
+        }
+
         if (line.startsWith('#') || !line.trim()) return line;
         
         // This is a media segment or sub-playlist line

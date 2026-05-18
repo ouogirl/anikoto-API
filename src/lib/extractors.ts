@@ -83,12 +83,89 @@ export async function extractMegacloud(embedUrl: string): Promise<ExtractedStrea
 }
 
 export async function extractStreamUrl(embedUrl: string): Promise<ExtractedStream | null> {
-  const host = new URL(embedUrl).hostname;
+  let currentUrl = embedUrl;
+  let html = '';
+  
+  for (let i = 0; i < 3; i++) {
+    try {
+      let host = new URL(currentUrl).host;
+      let referer = 'https://' + host + '/';
+      let response;
+      
+      try {
+        response = await axios.get(currentUrl, {
+          headers: { ...DEFAULT_HEADERS, Referer: referer },
+          timeout: 8000
+        });
+      } catch (err) {
+        if (currentUrl.includes('vidwish.live') || currentUrl.includes('megacloud.bloggy.click')) {
+          const fallbackUrl = currentUrl
+            .replace('vidwish.live', 'megaplay.buzz')
+            .replace('megacloud.bloggy.click', 'megaplay.buzz');
+          host = new URL(fallbackUrl).host;
+          referer = 'https://' + host + '/';
+          response = await axios.get(fallbackUrl, {
+            headers: { ...DEFAULT_HEADERS, Referer: referer },
+            timeout: 8000
+          });
+          currentUrl = fallbackUrl;
+        } else {
+          throw err;
+        }
+      }
+      
+      html = response.data;
+      
+      // If we got a 200 OK but it is actually a custom error page (e.g. 404 from Vidcloud)
+      const isErrorPage = html.includes('Error -') || html.includes('error-container') || html.includes('doesn\'t exist');
+      if (isErrorPage && (currentUrl.includes('vidwish.live') || currentUrl.includes('megacloud.bloggy.click'))) {
+        const fallbackUrl = currentUrl
+          .replace('vidwish.live', 'megaplay.buzz')
+          .replace('megacloud.bloggy.click', 'megaplay.buzz');
+        host = new URL(fallbackUrl).host;
+        referer = 'https://' + host + '/';
+        response = await axios.get(fallbackUrl, {
+          headers: { ...DEFAULT_HEADERS, Referer: referer },
+          timeout: 8000
+        });
+        currentUrl = fallbackUrl;
+        html = response.data;
+      }
+      
+      // Check if there is an iframe src pointing to a stream/embed URL
+      const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (iframeMatch) {
+        const iframeSrc = iframeMatch[1];
+        const resolvedUrl = new URL(iframeSrc, currentUrl).toString();
+        if (resolvedUrl !== currentUrl) {
+          currentUrl = resolvedUrl;
+          continue;
+        }
+      }
+    } catch (err) {
+      console.error(`[extractStreamUrl] Failed to fetch or parse HTML for ${currentUrl}:`, err);
+      if (!currentUrl.includes('megaplay.buzz') && (currentUrl.includes('vidwish.live') || currentUrl.includes('megacloud.bloggy.click'))) {
+        try {
+          const fallbackUrl = currentUrl
+            .replace('vidwish.live', 'megaplay.buzz')
+            .replace('megacloud.bloggy.click', 'megaplay.buzz');
+          currentUrl = fallbackUrl;
+          i--;
+          continue;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    break;
+  }
+
+  const host = new URL(currentUrl).hostname;
   
   if (host.includes('megaplay.buzz') || host.includes('vidwish.live')) {
-    return extractMegaplay(embedUrl);
+    return extractMegaplay(currentUrl);
   } else if (host.includes('megacloud.blog')) {
-    return extractMegacloud(embedUrl);
+    return extractMegacloud(currentUrl);
   }
   
   return null;
