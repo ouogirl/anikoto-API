@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import spec from "@/lib/openapi-spec";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 // Tag colours
 const TAG_COLORS: Record<string, string> = {
@@ -25,6 +26,7 @@ for (const [path, pathData] of Object.entries(spec.paths)) {
 export default function DocsPage() {
   const firstPath = Object.keys(spec.paths)[0];
   const [activePath, setActivePath] = useState<string>(firstPath);
+  const [prevActivePath, setPrevActivePath] = useState<string>(firstPath);
   const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [testResponse, setTestResponse] = useState<{
     status: number;
@@ -32,10 +34,11 @@ export default function DocsPage() {
     loading: boolean;
   } | null>(null);
 
-  useEffect(() => {
+  if (activePath !== prevActivePath) {
+    setPrevActivePath(activePath);
     setParamValues({});
     setTestResponse(null);
-  }, [activePath]);
+  }
 
   const handleTestRequest = async (method: string, endpointParams: any[]) => {
     setTestResponse({ status: 0, data: null, loading: true });

@@ -152,7 +152,7 @@ export async function extractStreamUrl(embedUrl: string): Promise<ExtractedStrea
           currentUrl = fallbackUrl;
           i--;
           continue;
-        } catch (e) {
+        } catch {
           // ignore
         }
       }

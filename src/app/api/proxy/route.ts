@@ -75,8 +75,8 @@ export async function GET(req: Request) {
       status: 200,
       headers: resHeaders,
     });
-  } catch (err: any) {
-    const status = err.response?.status || 500;
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status || 500 : 500;
     console.error(`[Proxy Error] ${status} on ${targetUrl}`);
     return NextResponse.json({ ok: false, message: 'Proxy request failed' }, { status });
   }

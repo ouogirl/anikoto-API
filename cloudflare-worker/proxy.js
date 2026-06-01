@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * Aonime Proxy — Cloudflare Worker
  *
@@ -122,3 +123,4 @@ export default {
     });
   },
 };
+

@@ -1,3 +1,4 @@
+/* eslint-disable */
 const axios = require('axios');
 const cheerio = require('cheerio');
 async function test() {
@@ -16,3 +17,4 @@ async function test() {
   }
 }
 test().catch(console.error);
+

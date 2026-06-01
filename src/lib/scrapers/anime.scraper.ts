@@ -112,7 +112,7 @@ export async function scrapeAnimeEpisodes(
   startEpisode?: number,
   endEpisode?: number
 ): Promise<AnimeEpisodes> {
-  let $ = await fetchPage(`/watch/${slug}`);
+  const $ = await fetchPage(`/watch/${slug}`);
   const animeId = $('#watch-main').attr('data-id') ?? '';
 
   // If the episodes container is empty or loading, fetch via AJAX
