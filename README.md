@@ -23,6 +23,12 @@
 
 > **For educational purposes only.** This project is not affiliated with anikoto.net.
 
+> [!IMPORTANT]
+>
+> 1. There was previously a hosted version of this API for showcasing purposes only, and it was misused; It is recommended to deploy your own instance for personal use by customizing the API as you need it to be.
+> 2. This API is just an unofficial API for [anikoto.net](https://anikoto.net) and is in no other way officially related to the same.
+> 3. The content that this API provides is not mine, nor is it hosted by me. These belong to their respective owners. This API just demonstrates how to build an API that scrapes websites and uses their content.
+
 ---
 
 ## ✨ Features
