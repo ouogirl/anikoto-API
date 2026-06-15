@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { DEFAULT_HEADERS } from './constants';
 
+// ─── Kiwi Mapper CDN URL helper ──────────────────────────────────────────────
+const KIWI_MAPPER_URL = 'https://mapper.mewcdn.online/api/mal';
+
 export interface SubtitleTrack {
   file: string;
   label?: string;
@@ -132,6 +135,139 @@ async function _doMegacloud(
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Resolves a stream via the Kiwi/MewCDN mapper API.
+ *
+ * This bypasses mewstream.buzz entirely — the CDN used is kwik.cx2.mewcdn.online
+ * which is not behind Cloudflare bot-protection.
+ *
+ * @param malId     - MAL ID of the anime (data-mal attribute from episode anchor)
+ * @param epNum     - Episode number (1-based integer)
+ * @param timestamp - Episode timestamp (data-timestamp attribute from episode anchor)
+ * @param type      - 'sub' | 'dub'
+ * @param baseUrl   - The anikoto base URL (used for /ajax/server lookup)
+ */
+export async function extractKiwiMapper(
+  malId: string,
+  epNum: string | number,
+  timestamp: string,
+  type: 'sub' | 'dub',
+  baseUrl: string
+): Promise<ExtractedStream | null> {
+  try {
+    const mapperUrl = `${KIWI_MAPPER_URL}/${encodeURIComponent(malId)}/${encodeURIComponent(epNum)}/${encodeURIComponent(timestamp)}`;
+    const { data } = await axios.get(mapperUrl, {
+      headers: {
+        ...DEFAULT_HEADERS,
+        Referer: baseUrl + '/',
+        Origin: baseUrl,
+      },
+      timeout: 8000,
+    });
+
+    if (!data || typeof data !== 'object') return null;
+
+    // Find a stream key matching the requested quality + type, e.g. "Stream 1080"
+    // Fall back to any key containing the type if no quality-prefixed key found.
+    let serverCode: string | null = null;
+    const qualityPriority = ['1080', '720', '480', '360'];
+
+    for (const q of qualityPriority) {
+      const key = `Stream ${q}`;
+      if (data[key]?.[type]?.url) {
+        serverCode = data[key][type].url;
+        break;
+      }
+    }
+
+    // Fallback: any key that has the requested type
+    if (!serverCode) {
+      for (const key of Object.keys(data)) {
+        if (data[key]?.[type]?.url) {
+          serverCode = data[key][type].url;
+          break;
+        }
+      }
+    }
+
+    if (!serverCode) return null;
+
+    // Resolve the server code to an actual embed URL via anikoto AJAX
+    const { data: serverData } = await axios.get(`${baseUrl}/ajax/server?get=${serverCode}`, {
+      headers: { ...DEFAULT_HEADERS, 'X-Requested-With': 'XMLHttpRequest' },
+      timeout: 5000,
+    });
+
+    let embedUrl: string | null = serverData?.result?.url ?? null;
+    if (!embedUrl) return null;
+
+    // Some URLs are base64-encoded after "#"
+    if (embedUrl.includes('#')) {
+      try {
+        const encoded = embedUrl.split('#')[1];
+        embedUrl = Buffer.from(encoded, 'base64').toString('utf-8');
+      } catch (_) {}
+    }
+
+    const referer = 'https://kwik.cx2.mewcdn.online/';
+    return { m3u8: embedUrl, referer, tracks: [] };
+  } catch (err) {
+    console.error('[extractKiwiMapper] Failed:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * Resolves a stream via VidStream's save_data.php endpoint.
+ *
+ * This approach extracts data-ep-id, type, and domain2_url directly from the
+ * embed page, then calls {domain2}/save_data.php?id={epId}-{type} which returns
+ * stream sources and subtitle tracks — completely independent of mewstream.buzz.
+ *
+ * @param embedUrl - The embed URL of the VidStream server
+ * @param referer  - Referer to send with the request
+ */
+export async function extractVidstream(
+  embedUrl: string,
+  referer: string
+): Promise<ExtractedStream | null> {
+  try {
+    const { data: html } = await axios.get<string>(embedUrl, {
+      headers: { ...DEFAULT_HEADERS, Referer: referer },
+      timeout: 8000,
+    });
+
+    const epIdMatch = html.match(/data-ep-id=["'](\d+)["']/);
+    const typeMatch = html.match(/type:\s*'(\w+)'/);
+    const domain2Match = html.match(/domain2_url:\s*'([^']+)'/);
+
+    if (!epIdMatch || !typeMatch || !domain2Match) return null;
+
+    const epId = epIdMatch[1];
+    const epType = typeMatch[1];
+    const domain2 = domain2Match[1].trim();
+
+    const saveDataUrl = `${domain2}/save_data.php?id=${epId}-${epType}`;
+    const { data } = await axios.get(saveDataUrl, {
+      headers: { ...DEFAULT_HEADERS, Referer: referer },
+      timeout: 8000,
+    });
+
+    const sources = data?.data?.sources ?? [];
+    const tracks: SubtitleTrack[] = data?.data?.tracks ?? [];
+    const m3u8 = sources[0]?.url ?? null;
+
+    if (!m3u8) return null;
+
+    // Use domain2 as referer for CDN requests
+    return { m3u8, referer: domain2 + '/', tracks };
+  } catch (err) {
+    console.error('[extractVidstream] Failed:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 
 /**
  * Public wrapper — fetches the Megaplay embed page then extracts the stream.

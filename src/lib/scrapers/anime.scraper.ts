@@ -155,6 +155,8 @@ async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
         href,
         id: $el.attr('data-id') ?? undefined,
         dataIds: $el.attr('data-ids') ?? $el.attr('data-id') ?? undefined,
+        dataMal: $el.attr('data-mal') ?? undefined,
+        dataTimestamp: $el.attr('data-timestamp') ?? undefined,
         hasDub: $el.find('.ep-status.dub').length > 0 || $el.text().toLowerCase().includes('dub') || $el.attr('data-dub') === '1',
         hasSub: $el.find('.ep-status.sub').length > 0 || $el.text().toLowerCase().includes('sub') || $el.attr('data-sub') === '1',
       });

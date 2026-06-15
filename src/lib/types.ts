@@ -120,6 +120,8 @@ export interface Episode {
   href: string;
   id?: string;
   dataIds?: string;
+  dataMal?: string;       // MAL ID — used by Kiwi Mapper API
+  dataTimestamp?: string; // Episode timestamp — used by Kiwi Mapper API
   hasDub?: boolean;
   hasSub?: boolean;
 }

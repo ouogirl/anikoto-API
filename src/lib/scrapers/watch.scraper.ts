@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 import { fetchJson } from '../fetcher';
 import { scrapeAnimeEpisodes } from './anime.scraper';
 import { Episode } from '../types';
-import { extractStreamUrl, SubtitleTrack } from '../extractors';
+import { extractStreamUrl, extractKiwiMapper, extractVidstream, SubtitleTrack } from '../extractors';
 import { BASE_URL } from '../constants';
 
 export interface VideoServer {
@@ -101,8 +101,42 @@ export async function scrapeWatch(slug: string, epNum: string): Promise<WatchDat
   //    slow/unreachable server cannot stall the entire response.
   const sources: VideoSource[] = [];
 
-  await Promise.all(
-    servers.map(async (server) => {
+  // ── Kiwi Mapper source (independent, runs alongside regular servers) ───────
+  // Uses mapper.mewcdn.online API which returns stream URLs from a CDN
+  // that is NOT behind Cloudflare bot-protection (kwik.cx2.mewcdn.online).
+  // Requires data-mal and data-timestamp attributes from the episode element.
+  const kiwiTask = (async () => {
+    if (!ep.dataMal || !ep.dataTimestamp) return;
+    for (const type of ['sub', 'dub'] as const) {
+      try {
+        const extracted = await withTimeout(
+          extractKiwiMapper(ep.dataMal, ep.number, ep.dataTimestamp, type, BASE_URL),
+          SERVER_TIMEOUT_MS,
+          `Kiwi Mapper (${type})`
+        );
+        if (extracted) {
+          sources.push({
+            server: 'Kiwi Stream',
+            type,
+            url: extracted.m3u8,
+            m3u8: extracted.m3u8,
+            referer: extracted.referer,
+            proxyUrl: getProxyUrl(extracted.m3u8, extracted.referer),
+            tracks: extracted.tracks?.map(t => ({
+              ...t,
+              proxyUrl: getProxyUrl(t.file, extracted.referer)
+            })) || [],
+          });
+        }
+      } catch (err) {
+        console.error(`Skipping Kiwi Mapper (${type}):`, err instanceof Error ? err.message : err);
+      }
+    }
+  })();
+
+  await Promise.all([
+    kiwiTask,
+    ...servers.map(async (server) => {
       try {
         await withTimeout(
           (async () => {
@@ -116,8 +150,25 @@ export async function scrapeWatch(slug: string, epNum: string): Promise<WatchDat
             );
             if (sourceData.status && sourceData.result?.url) {
               const embedUrl = sourceData.result.url;
-              // 3. Extract the actual m3u8 stream link and referer
-              const extracted = await extractStreamUrl(embedUrl);
+              const epRefererFull = `${BASE_URL}/watch/${slug}/ep-${epNum}`;
+
+              // ── VidStream path: try save_data.php first ──────────────────
+              // Detects servers that use domain2_url + save_data.php pattern.
+              // Falls back to the standard extractStreamUrl if this fails.
+              const serverNameLower = server.name.toLowerCase();
+              const isVidstreamLike =
+                serverNameLower.includes('vidstream') ||
+                serverNameLower.includes('vidplay') ||
+                serverNameLower.includes('vid-');
+
+              let extracted = isVidstreamLike
+                ? await extractVidstream(embedUrl, epRefererFull).catch(() => null)
+                : null;
+
+              // Fall back to standard extraction if VidStream path didn't work
+              if (!extracted) {
+                extracted = await extractStreamUrl(embedUrl);
+              }
 
               sources.push({
                 server: server.name,
@@ -128,7 +179,7 @@ export async function scrapeWatch(slug: string, epNum: string): Promise<WatchDat
                 proxyUrl: extracted?.m3u8 ? getProxyUrl(extracted.m3u8, extracted.referer) : null,
                 tracks: extracted?.tracks?.map(t => ({
                   ...t,
-                  proxyUrl: getProxyUrl(t.file, extracted.referer)
+                  proxyUrl: getProxyUrl(t.file, extracted!.referer)
                 })) || [],
               });
             }
@@ -140,7 +191,7 @@ export async function scrapeWatch(slug: string, epNum: string): Promise<WatchDat
         console.error(`Skipping server ${server.name} (${server.id}):`, err instanceof Error ? err.message : err);
       }
     })
-  );
+  ]);
 
   return {
     episode: ep,
