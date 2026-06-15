@@ -3,7 +3,9 @@ import { DEFAULT_HEADERS } from './constants';
 
 const KIWI_MAPPER_URLS = [
   'https://mapper.nekostream.site/api/mal',
-  'https://mapper.mewcdn.online/api/mal'
+  'https://mapper.mewcdn.online/api/mal',
+];
+
 async function parseM3u8Subtitles(
   m3u8Url: string,
   referer: string
@@ -357,20 +359,6 @@ export async function extractStreamUrl(embedUrl: string): Promise<ExtractedStrea
         }
       }
 
-ata;
-      }
-
-      // Follow iframe
-      const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-      if (iframeMatch) {
-        const resolved = new URL(iframeMatch[1], currentUrl).toString();
-        if (resolved !== currentUrl) {
-          currentUrl = resolved;
-          continue;
-        }
-      }
-
-      // No iframe — dispatch with pre-fetched HTML (avoids duplicate GET)
       const finalHost = new URL(currentUrl).hostname;
       const finalReferer = 'https://' + new URL(currentUrl).host + '/';
 
