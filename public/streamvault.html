@@ -215,7 +215,19 @@ function uiSlot(i){
 function renderQ(){const el=document.getElementById('qEl');if(!Q.length){el.innerHTML='Empty';return;}el.innerHTML=Q.map((q,i)=>`<div class="flex justify-between p-1.5 bg-white/[.02] rounded mb-1 anim"><span class="truncate">${q.title}</span><button onclick="Q.splice(${i},1);renderQ()" class="text-slate-600 hover:text-red-400 ml-2">✕</button></div>`).join('');}
 function renderDone(){const el=document.getElementById('dEl');if(!Done.length){el.innerHTML='Empty';return;}el.innerHTML=Done.map((d,i)=>`<div class="flex justify-between p-1.5 bg-white/[.02] rounded mb-1 anim"><span class="truncate text-green-400">✓ ${d.title} <span class="text-slate-600">${fB(d.size)}</span></span>${d.blob?`<button onclick="reDL(${i})" class="btn2 ml-2" style="padding:2px 8px">↓</button>`:''}</div>`).join('');}
 function reDL(i){const d=Done[i];if(d?.blob)trigDL(d.blob,d.fn);else toast('Expired',false);}
-function trigDL(blob,fn){const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(u),30000);}
+function trigDL(blob,fn){
+  // Use File object instead of raw Blob — better compatibility with transfer apps
+  const file = new File([blob], fn, { type: 'video/mp4', lastModified: Date.now() });
+  const u = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = u;
+  a.download = fn;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Keep URL alive longer for large files
+  setTimeout(() => URL.revokeObjectURL(u), 120000);
+}
 
 // ===== ADD DOWNLOAD =====
 function go(){
@@ -315,8 +327,8 @@ async function dlAnime(i, item, sig) {
   }
   if (!pick.length) throw new Error('No m3u8 sources');
   
-  // Prefer HD-1 or Vidstream servers (more reliable)
-  const preferred = pick.find(s => /HD|Vidstream/i.test(s.server)) || pick[0];
+  // Prefer HD-1 first (usually has fewer, larger segments = faster download)
+  const preferred = pick.find(s => /^HD/i.test(s.server)) || pick.find(s => /Vidstream/i.test(s.server)) || pick[0];
   
   Slots[i].audio = preferred.type;
   Slots[i].server = preferred.server;
@@ -409,9 +421,8 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
   L(`Slot ${i+1}: ${segs.length} segments`, 'dl');
   Slots[i].segT=segs.length; Slots[i].segD=0; uiSlot(i);
   
-  // Sliding-window concurrent download — keeps 6 requests in flight at all times
-  // Instead of batch-wait-batch, new requests launch as soon as one finishes
-  const CC = 6;
+  // Sliding-window concurrent download — keeps 10 requests in flight at all times
+  const CC = 10;
   const chunks = new Array(segs.length);
   let nextIdx = 0;
   let doneCount = 0;
