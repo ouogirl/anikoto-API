@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/mux.js@7.0.3/dist/mux.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
@@ -86,7 +87,8 @@ input:focus{border-color:rgba(168,85,247,.5)}
       <div id="urlBadge" class="absolute right-3 top-1/2 -translate-y-1/2 hidden"></div>
     </div>
     <select id="audSel" style="width:66px;flex:0 0 66px;padding:11px 4px;font-size:11px;text-align:center"><option value="sub">SUB</option><option value="dub">DUB</option></select>
-    <button onclick="go()" class="btn btn1 whitespace-nowrap" style="flex:0 0 auto">⬇ Download</button>
+    <button onclick="go()" class="btn btn1 whitespace-nowrap" style="flex:0 0 auto">⬇ Ep</button>
+    <button onclick="goAll()" class="btn btn1 whitespace-nowrap" style="flex:0 0 auto;background:linear-gradient(135deg,#059669,#10b981)">📦 All</button>
   </div>
   <div id="urlHint" class="text-[11px] mt-1.5 hidden"></div>
 </div>
@@ -244,6 +246,100 @@ function go(){
   const free=Slots.findIndex(s=>s===null);
   if(free!==-1)startSlot(free,item);else{Q.push(item);renderQ();L('Queued: '+item.title);}
   document.getElementById('urlIn').value='';document.getElementById('urlBadge').classList.add('hidden');document.getElementById('urlHint').classList.add('hidden');stats();
+}
+
+// ===== SEASON DOWNLOAD =====
+async function goAll() {
+  const url = document.getElementById('urlIn').value.trim();
+  if (!url) { toast('Enter URL', false); return; }
+  const p = parseUrl(url);
+  if (!p) { toast('Not an anime URL', false); return; }
+  const audio = document.getElementById('audSel').value;
+  
+  let slug = p.slug;
+  let title = slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
+  
+  L('Fetching episode list...', 'api');
+  toast('Loading episodes...');
+  
+  try {
+    // HiAnime: search first to find Anikoto slug
+    if (p.platform === 'hianime') {
+      const searchTitle = slug.replace(/-[a-z0-9]{5,}$/i, '').replace(/-episode-\d+/i, '').replace(/-/g, ' ');
+      const sr = await fetch(`${API}/api/search?keyword=${encodeURIComponent(searchTitle)}`);
+      if (!sr.ok) throw new Error('Search failed');
+      const sd = await sr.json();
+      if (!sd.ok || !sd.data?.results?.length) throw new Error('Not found');
+      slug = sd.data.results[0].slug;
+      title = sd.data.results[0].title;
+    }
+    
+    // Get episode list
+    const epR = await fetch(`${API}/api/anime/${slug}/episodes`);
+    if (!epR.ok) throw new Error('Episodes API: ' + epR.status);
+    const epD = await epR.json();
+    
+    let episodes = [];
+    if (epD.ok && epD.data) {
+      episodes = epD.data.episodes || epD.data || [];
+    }
+    
+    if (!episodes.length) {
+      // Fallback: try the anime detail endpoint
+      const anR = await fetch(`${API}/api/anime/${slug}`);
+      if (anR.ok) {
+        const anD = await anR.json();
+        if (anD.ok && anD.data) {
+          const epCount = anD.data.episodes?.sub || anD.data.episodes?.dub || anD.data.totalEpisodes || 0;
+          if (epCount > 0) {
+            // Create episode list from count
+            for (let e = 1; e <= epCount; e++) {
+              episodes.push({ number: e });
+            }
+          }
+        }
+      }
+    }
+    
+    if (!episodes.length) throw new Error('No episodes found');
+    
+    const count = episodes.length;
+    L(`Found ${count} episodes for "${title}"`, 'ok');
+    
+    if (!confirm(`Download all ${count} episodes of "${title}" (${audio.toUpperCase()})?\n\nThis will queue ${count} downloads.`)) {
+      L('Season download cancelled', 'warn');
+      return;
+    }
+    
+    // Queue all episodes
+    for (let e = 0; e < count; e++) {
+      const epNum = episodes[e].number || episodes[e].episode_no || (e + 1);
+      const item = {
+        url, slug, ep: epNum, platform: 'anikoto', audio,
+        title: `${title} Ep${epNum}`
+      };
+      
+      const free = Slots.findIndex(s => s === null);
+      if (free !== -1 && e < 2) {
+        startSlot(free, item);
+      } else {
+        Q.push(item);
+      }
+    }
+    
+    renderQ();
+    stats();
+    toast(`Queued ${count} episodes!`);
+    L(`Queued ${count} episodes of "${title}"`, 'ok');
+    
+  } catch (e) {
+    L('Season download error: ' + e.message, 'err');
+    toast(e.message, false);
+  }
+  
+  document.getElementById('urlIn').value = '';
+  document.getElementById('urlBadge').classList.add('hidden');
+  document.getElementById('urlHint').classList.add('hidden');
 }
 
 // ===== SLOT ENGINE =====
@@ -469,14 +565,50 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
     launch();
   });
   
-  // Combine all TS segments and save as .mp4
-  // Content is H.264+AAC in TS container but .mp4 extension ensures
-  // iPhones, LocalSend, and all apps recognize and open the file
-  Slots[i].status='Combining segments...';uiSlot(i);
+  // Remux TS → proper MP4 using mux.js (H.264/AAC passthrough, no re-encoding)
+  Slots[i].status='Remuxing to MP4...';uiSlot(i);
   const total = chunks.reduce((a,c) => a+c.byteLength, 0);
-  const blob = new Blob(chunks, { type: 'video/mp4' });
   
-  L(`Slot ${i+1}: ✓ ${fB(total)} — H.264/AAC`, 'ok');
+  let blob;
+  if (typeof muxjs !== 'undefined') {
+    // Concatenate all TS data into one buffer first
+    const allTS = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) { allTS.set(c, offset); offset += c.byteLength; }
+    
+    const mp4Parts = [];
+    const tx = new muxjs.mp4.Transmuxer({
+      keepOriginalTimestamps: false,
+      baseMediaDecodeTime: 0
+    });
+    
+    tx.on('data', seg => {
+      if (mp4Parts.length === 0) {
+        // First event: init segment (ftyp+moov) + first moof+mdat
+        const buf = new Uint8Array(seg.initSegment.byteLength + seg.data.byteLength);
+        buf.set(seg.initSegment, 0);
+        buf.set(seg.data, seg.initSegment.byteLength);
+        mp4Parts.push(buf);
+      } else {
+        mp4Parts.push(new Uint8Array(seg.data));
+      }
+    });
+    
+    // Push entire TS stream at once, flush once
+    tx.push(allTS);
+    tx.flush();
+    
+    if (mp4Parts.length > 0) {
+      blob = new Blob(mp4Parts, { type: 'video/mp4' });
+      L(`Slot ${i+1}: ✓ Remuxed to MP4 (H.264+AAC)`, 'ok');
+    } else {
+      blob = new Blob(chunks, { type: 'video/mp4' });
+      L(`Slot ${i+1}: Remux empty, using raw TS as .mp4`, 'warn');
+    }
+  } else {
+    blob = new Blob(chunks, { type: 'video/mp4' });
+    L(`Slot ${i+1}: mux.js unavailable, raw TS as .mp4`, 'warn');
+  }
   L(`Slot ${i+1}: ✅ Done! ${fB(total)}`,'ok');toast(`Downloaded: ${fn}`);
   if(AUTO)trigDL(blob,fn);
   Done.unshift({title:(Slots[i].title||'Video')+' '+(Slots[i].sub||''),fn,size:total,blob});
