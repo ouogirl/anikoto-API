@@ -447,17 +447,16 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
     launch();
   });
   
-  // Combine all TS segments into one file
-  // The segments are already H.264 video + AAC audio in MPEG-TS container
-  // Save as .ts — plays natively on every player (VLC, iOS, Windows, etc.)
-  Slots[i].status='Combining segments...';uiSlot(i);
+  // Combine all TS segments
+  // We keep the .mp4 extension so iPhone "Save Video" works, 
+  // even though data is technically MPEG-TS. Most players auto-detect this.
+  Slots[i].status='Finalizing file...';uiSlot(i);
   const total = chunks.reduce((a,c) => a+c.byteLength, 0);
-  const blob = new Blob(chunks, { type: 'video/mp2t' });
   
-  // Change extension to .ts (honest about format, maximum compatibility)
-  fn = fn.replace(/\.mp4$/, '.ts');
+  // Use video/mp4 MIME type to ensure iOS compatibility
+  const blob = new Blob(chunks, { type: 'video/mp4' });
   
-  L(`Slot ${i+1}: ✓ ${fB(total)} — H.264/AAC in TS container`, 'ok');
+  L(`Slot ${i+1}: ✓ ${fB(total)} — H.264/AAC encoded`, 'ok');
   L(`Slot ${i+1}: ✅ Done! ${fB(total)}`,'ok');toast(`Downloaded: ${fn}`);
   if(AUTO)trigDL(blob,fn);
   Done.unshift({title:(Slots[i].title||'Video')+' '+(Slots[i].sub||''),fn,size:total,blob});
