@@ -340,21 +340,30 @@ async function dlAnime(i, item, sig) {
 async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
   Slots[i].status = 'Fetching playlist...'; uiSlot(i);
   
-  // Always fetch m3u8 through proxy with referer
+  // Build fetch URL — use proxy if not already a proxy URL
   let fetchUrl = m3u8Url;
   if (!m3u8Url.includes('/api/proxy')) {
     fetchUrl = API + '/api/proxy?url=' + encodeURIComponent(m3u8Url) + '&referer=' + encodeURIComponent(referer);
+  } else if (m3u8Url.startsWith('/')) {
+    // Relative proxy path — prepend API origin
+    fetchUrl = API + m3u8Url;
   }
   
   const resp = await fetch(fetchUrl, { signal: sig });
   if (!resp.ok) {
-    L(`Slot ${i+1}: M3U8 fetch returned ${resp.status}, trying next source...`, 'warn');
+    L(`Slot ${i+1}: M3U8 ${resp.status}`, 'warn');
     throw new Error('M3U8: ' + resp.status);
   }
   const txt = await resp.text();
   const lines = txt.split('\n').map(l=>l.trim()).filter(Boolean);
-  const base = (origM3u8||m3u8Url).replace(/[^/]*$/,'');
-  const abs = u => u.startsWith('http') ? u : base + u;
+  
+  // Helper: resolve URL - handles proxy paths, absolute URLs, and relative URLs
+  const resolveUrl = u => {
+    if (u.startsWith('/api/proxy')) return API + u;          // Already a proxy path from the API
+    if (u.startsWith('http')) return u;                       // Absolute URL
+    const base = (origM3u8||m3u8Url).replace(/[^/]*$/, '');  // Relative to original m3u8
+    return base + u;
+  };
   
   // Master playlist? Pick highest quality
   if (lines.some(l=>l.includes('#EXT-X-STREAM-INF'))) {
@@ -363,22 +372,27 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
       if (lines[j].startsWith('#EXT-X-STREAM-INF')) {
         const rm=lines[j].match(/RESOLUTION=\d+x(\d+)/);
         const res=rm?+rm[1]:0;
-        if(lines[j+1]&&!lines[j+1].startsWith('#')&&res>=bestRes){bestRes=res;best=abs(lines[j+1]);}
+        if(lines[j+1]&&!lines[j+1].startsWith('#')&&res>=bestRes){bestRes=res;best=lines[j+1];}
       }
     }
     if(!best) {
-      // Grab first non-comment line as variant
-      for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=abs(lines[j+1]);break;}}
+      for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=lines[j+1];break;}}
     }
     if(!best)throw new Error('No variants');
     L(`Slot ${i+1}: ${bestRes}p selected`, 'dl');
-    // Fetch variant playlist through proxy with SAME referer
-    const proxyBest = API + '/api/proxy?url=' + encodeURIComponent(best) + '&referer=' + encodeURIComponent(referer);
-    return dlHLS(i, proxyBest, best, referer, fn, sig);
+    
+    const variantUrl = resolveUrl(best);
+    // If it's already a proxy URL, fetch directly; otherwise wrap in proxy
+    if (variantUrl.includes('/api/proxy')) {
+      return dlHLS(i, variantUrl, origM3u8, referer, fn, sig);
+    } else {
+      const proxied = API + '/api/proxy?url=' + encodeURIComponent(variantUrl) + '&referer=' + encodeURIComponent(referer);
+      return dlHLS(i, proxied, variantUrl, referer, fn, sig);
+    }
   }
   
   // Media playlist — extract segments
-  const segs = lines.filter(l=>l&&!l.startsWith('#')).map(abs);
+  const segs = lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);
   if(!segs.length) throw new Error('No segments');
   L(`Slot ${i+1}: ${segs.length} segments`, 'dl');
   Slots[i].segT=segs.length; Slots[i].segD=0; uiSlot(i);
@@ -388,11 +402,12 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
     if(sig.aborted)throw new DOMException('Aborted','AbortError');
     const batch=segs.slice(j,j+CC);
     const results=await Promise.all(batch.map(async segUrl=>{
-      // ALL segments go through proxy with the correct referer
-      const proxied=API+'/api/proxy?url='+encodeURIComponent(segUrl)+'&referer='+encodeURIComponent(referer);
-      try{const r=await fetch(proxied,{signal:sig});if(r.ok)return await r.arrayBuffer();}catch(e){if(e.name==='AbortError')throw e;}
-      // Fallback: try direct (unlikely to work but worth trying)
-      try{const r=await fetch(segUrl,{signal:sig});if(r.ok)return await r.arrayBuffer();}catch(e){if(e.name==='AbortError')throw e;}
+      // If already a proxy URL, use directly; otherwise wrap
+      let target = segUrl;
+      if (!segUrl.includes('/api/proxy')) {
+        target = API+'/api/proxy?url='+encodeURIComponent(segUrl)+'&referer='+encodeURIComponent(referer);
+      }
+      try{const r=await fetch(target,{signal:sig});if(r.ok)return await r.arrayBuffer();}catch(e){if(e.name==='AbortError')throw e;}
       L(`Slot ${i+1}: seg failed`,'warn');return new ArrayBuffer(0);
     }));
     for(const buf of results){chunks.push(new Uint8Array(buf));Slots[i].dl+=buf.byteLength;Slots[i].segD++;trkSpd(i);}
