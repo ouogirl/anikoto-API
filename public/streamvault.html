@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://github.com/videojs/mux.js/releases/latest/download/mux.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -414,11 +415,57 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
     Slots[i].status=`${Slots[i].segD}/${segs.length} segments...`;uiSlot(i);stats();
   }
   
-  Slots[i].status='Building MP4...';uiSlot(i);
-  const total=chunks.reduce((a,c)=>a+c.byteLength,0);
-  const combined=new Uint8Array(total);let off=0;
-  for(const c of chunks){combined.set(c,off);off+=c.byteLength;}
-  const blob=new Blob([combined],{type:'video/mp4'});
+  Slots[i].status='Remuxing TS → MP4 (H.264/AAC)...';uiSlot(i);
+  L(`Slot ${i+1}: Transmuxing ${chunks.length} segments to MP4...`,'dl');
+  
+  let blob;
+  if (typeof muxjs !== 'undefined') {
+    // Real TS→MP4 transmux using mux.js
+    const mp4Parts = [];
+    let isFirst = true;
+    
+    await new Promise((resolve, reject) => {
+      const transmuxer = new muxjs.mp4.Transmuxer({ remux: true });
+      
+      transmuxer.on('data', segment => {
+        if (isFirst) {
+          // First segment: include init segment (ftyp + moov boxes)
+          const combined = new Uint8Array(segment.initSegment.byteLength + segment.data.byteLength);
+          combined.set(segment.initSegment, 0);
+          combined.set(segment.data, segment.initSegment.byteLength);
+          mp4Parts.push(combined);
+          isFirst = false;
+        } else {
+          // Subsequent: just moof+mdat
+          mp4Parts.push(new Uint8Array(segment.data));
+        }
+      });
+      
+      transmuxer.on('done', () => resolve());
+      
+      // Push all TS chunks through transmuxer
+      for (const chunk of chunks) {
+        if (chunk.byteLength > 0) {
+          transmuxer.push(chunk);
+        }
+      }
+      transmuxer.flush();
+      resolve();
+    });
+    
+    blob = new Blob(mp4Parts, { type: 'video/mp4' });
+    L(`Slot ${i+1}: ✓ Transmuxed to proper MP4 (H.264 + AAC)`, 'ok');
+  } else {
+    // Fallback: raw concatenation (still plays in most players)
+    L(`Slot ${i+1}: mux.js not loaded, saving raw TS as .mp4`, 'warn');
+    const total = chunks.reduce((a,c) => a+c.byteLength, 0);
+    const combined = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { combined.set(c, off); off += c.byteLength; }
+    blob = new Blob([combined], { type: 'video/mp4' });
+  }
+  
+  const total = chunks.reduce((a,c) => a+c.byteLength, 0);
   L(`Slot ${i+1}: ✅ Done! ${fB(total)}`,'ok');toast(`Downloaded: ${fn}`);
   if(AUTO)trigDL(blob,fn);
   Done.unshift({title:(Slots[i].title||'Video')+' '+(Slots[i].sub||''),fn,size:total,blob});
