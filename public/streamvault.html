@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/mux.js@7.0.3/dist/mux.min.js"></script>
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
@@ -337,6 +338,53 @@ async function dlAnime(i, item, sig) {
   throw lastErr || new Error('All sources failed');
 }
 
+// ===== TS → MP4 REMUX (correct timestamps, iOS compatible) =====
+async function tsToMp4(chunks, slotIdx) {
+  // Concatenate all TS chunks into one continuous buffer first
+  const totalLen = chunks.reduce((a,c) => a + c.byteLength, 0);
+  const allTs = new Uint8Array(totalLen);
+  let o = 0;
+  for (const c of chunks) { allTs.set(c, o); o += c.byteLength; }
+  
+  return new Promise((resolve, reject) => {
+    const outParts = [];
+    let initSeg = null;
+    
+    // remux:true = output combined audio+video mp4
+    // keepOriginalTimestamps:false lets mux.js normalize to start at 0
+    const tx = new muxjs.mp4.Transmuxer({
+      remux: true,
+      keepOriginalTimestamps: false
+    });
+    
+    // Force the first segment's decode time to 0 (fixes 26-hour bug)
+    tx.setBaseMediaDecodeTime(0);
+    
+    tx.on('data', seg => {
+      if (!initSeg) initSeg = seg.initSegment;
+      outParts.push(new Uint8Array(seg.data));
+    });
+    
+    tx.on('done', () => {
+      if (!initSeg || !outParts.length) {
+        reject(new Error('transmuxer produced no output'));
+        return;
+      }
+      // Assemble: init segment (ftyp+moov) followed by all moof+mdat fragments
+      const dataLen = outParts.reduce((a,p) => a + p.byteLength, 0);
+      const out = new Uint8Array(initSeg.byteLength + dataLen);
+      out.set(initSeg, 0);
+      let off = initSeg.byteLength;
+      for (const p of outParts) { out.set(p, off); off += p.byteLength; }
+      resolve(new Blob([out], { type: 'video/mp4' }));
+    });
+    
+    // Push the entire concatenated TS in one go, then flush
+    tx.push(allTs);
+    tx.flush();
+  });
+}
+
 // ===== HLS DOWNLOAD =====
 async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
   Slots[i].status = 'Fetching playlist...'; uiSlot(i);
@@ -447,16 +495,29 @@ async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
     launch();
   });
   
-  // Combine all TS segments
-  // We keep the .mp4 extension so iPhone "Save Video" works, 
-  // even though data is technically MPEG-TS. Most players auto-detect this.
-  Slots[i].status='Finalizing file...';uiSlot(i);
   const total = chunks.reduce((a,c) => a+c.byteLength, 0);
+  let blob;
   
-  // Use video/mp4 MIME type to ensure iOS compatibility
-  const blob = new Blob(chunks, { type: 'video/mp4' });
+  if (typeof muxjs !== 'undefined') {
+    Slots[i].status = 'Converting to MP4 (H.264/AAC)...';
+    uiSlot(i);
+    L(`Slot ${i+1}: Remuxing to iOS-compatible MP4...`, 'dl');
+    
+    try {
+      blob = await tsToMp4(chunks, i);
+      L(`Slot ${i+1}: ✓ Proper MP4 (H.264 + AAC) — iOS compatible`, 'ok');
+    } catch(e) {
+      L(`Slot ${i+1}: Remux failed (${e.message}), saving as .ts`, 'warn');
+      blob = new Blob(chunks, { type: 'video/mp2t' });
+      fn = fn.replace(/\.mp4$/, '.ts');
+    }
+  } else {
+    L(`Slot ${i+1}: mux.js not loaded, saving as .ts`, 'warn');
+    blob = new Blob(chunks, { type: 'video/mp2t' });
+    fn = fn.replace(/\.mp4$/, '.ts');
+  }
   
-  L(`Slot ${i+1}: ✓ ${fB(total)} — H.264/AAC encoded`, 'ok');
+  L(`Slot ${i+1}: ✓ ${fB(total)}`, 'ok');
   L(`Slot ${i+1}: ✅ Done! ${fB(total)}`,'ok');toast(`Downloaded: ${fn}`);
   if(AUTO)trigDL(blob,fn);
   Done.unshift({title:(Slots[i].title||'Video')+' '+(Slots[i].sub||''),fn,size:total,blob});
