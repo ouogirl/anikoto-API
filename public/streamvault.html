@@ -276,16 +276,27 @@ async function dlAnime(i, item, sig) {
   if (!resp.ok) throw new Error('Watch: ' + resp.status);
   const text = await resp.text();
   
-  // Parse SSE response
+  // Parse response — handle BOTH plain JSON and SSE format
   const sources = [];
   let epInfo = null;
-  for (const line of text.split('\n')) {
-    if (!line.startsWith('data: ')) continue;
-    try {
-      const obj = JSON.parse(line.substring(6));
-      if (obj.type === 'source' && obj.source) sources.push(obj.source);
-      if (obj.type === 'episode' && obj.episode) epInfo = obj.episode;
-    } catch(e) {}
+  
+  // Try plain JSON first
+  try {
+    const json = JSON.parse(text);
+    if (json.ok && json.data) {
+      if (json.data.sources) sources.push(...json.data.sources);
+      if (json.data.episode) epInfo = json.data.episode;
+    }
+  } catch(e) {
+    // Not JSON — try SSE format (data: lines)
+    for (const line of text.split('\n')) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const obj = JSON.parse(line.substring(6));
+        if (obj.type === 'source' && obj.source) sources.push(obj.source);
+        if (obj.type === 'episode' && obj.episode) epInfo = obj.episode;
+      } catch(e2) {}
+    }
   }
   
   if (!sources.length) throw new Error('No sources found');
@@ -305,22 +316,47 @@ async function dlAnime(i, item, sig) {
   
   const fn = safe(`${Slots[i].title || slug}_Ep${ep}_${src.type}`) + '.mp4';
   
-  // Use proxyUrl (relative to API) — this routes through the built-in CORS proxy!
-  const m3u8Url = src.proxyUrl ? (API + src.proxyUrl) : src.m3u8;
-  await dlHLS(i, m3u8Url, src.m3u8, fn, sig);
+  // Try each matching source until one works (some CDNs may 403)
+  let lastErr = null;
+  for (const s of pick) {
+    const m3u8Url = s.proxyUrl ? (API + s.proxyUrl) : s.m3u8;
+    const ref = s.referer || 'https://megaplay.buzz/';
+    Slots[i].server = s.server;
+    uiSlot(i);
+    L(`Slot ${i+1}: Trying ${s.server} (${s.type})...`, 'dl');
+    try {
+      await dlHLS(i, m3u8Url, s.m3u8, ref, fn, sig);
+      return; // Success!
+    } catch(e) {
+      if (e.name === 'AbortError') throw e;
+      lastErr = e;
+      L(`Slot ${i+1}: ${s.server} failed: ${e.message}, trying next...`, 'warn');
+    }
+  }
+  throw lastErr || new Error('All sources failed');
 }
 
 // ===== HLS DOWNLOAD =====
-async function dlHLS(i, m3u8Url, origM3u8, fn, sig) {
+async function dlHLS(i, m3u8Url, origM3u8, referer, fn, sig) {
   Slots[i].status = 'Fetching playlist...'; uiSlot(i);
-  const resp = await fetch(m3u8Url, { signal: sig });
-  if (!resp.ok) throw new Error('M3U8: ' + resp.status);
+  
+  // Always fetch m3u8 through proxy with referer
+  let fetchUrl = m3u8Url;
+  if (!m3u8Url.includes('/api/proxy')) {
+    fetchUrl = API + '/api/proxy?url=' + encodeURIComponent(m3u8Url) + '&referer=' + encodeURIComponent(referer);
+  }
+  
+  const resp = await fetch(fetchUrl, { signal: sig });
+  if (!resp.ok) {
+    L(`Slot ${i+1}: M3U8 fetch returned ${resp.status}, trying next source...`, 'warn');
+    throw new Error('M3U8: ' + resp.status);
+  }
   const txt = await resp.text();
   const lines = txt.split('\n').map(l=>l.trim()).filter(Boolean);
   const base = (origM3u8||m3u8Url).replace(/[^/]*$/,'');
   const abs = u => u.startsWith('http') ? u : base + u;
   
-  // Master playlist?
+  // Master playlist? Pick highest quality
   if (lines.some(l=>l.includes('#EXT-X-STREAM-INF'))) {
     let best=null, bestRes=0;
     for (let j=0;j<lines.length;j++) {
@@ -330,13 +366,18 @@ async function dlHLS(i, m3u8Url, origM3u8, fn, sig) {
         if(lines[j+1]&&!lines[j+1].startsWith('#')&&res>=bestRes){bestRes=res;best=abs(lines[j+1]);}
       }
     }
+    if(!best) {
+      // Grab first non-comment line as variant
+      for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=abs(lines[j+1]);break;}}
+    }
     if(!best)throw new Error('No variants');
     L(`Slot ${i+1}: ${bestRes}p selected`, 'dl');
-    const proxyBest = API + '/api/proxy?url=' + encodeURIComponent(best) + '&referer=' + encodeURIComponent(base);
-    return dlHLS(i, proxyBest, best, fn, sig);
+    // Fetch variant playlist through proxy with SAME referer
+    const proxyBest = API + '/api/proxy?url=' + encodeURIComponent(best) + '&referer=' + encodeURIComponent(referer);
+    return dlHLS(i, proxyBest, best, referer, fn, sig);
   }
   
-  // Media playlist
+  // Media playlist — extract segments
   const segs = lines.filter(l=>l&&!l.startsWith('#')).map(abs);
   if(!segs.length) throw new Error('No segments');
   L(`Slot ${i+1}: ${segs.length} segments`, 'dl');
@@ -347,8 +388,10 @@ async function dlHLS(i, m3u8Url, origM3u8, fn, sig) {
     if(sig.aborted)throw new DOMException('Aborted','AbortError');
     const batch=segs.slice(j,j+CC);
     const results=await Promise.all(batch.map(async segUrl=>{
-      const proxied=API+'/api/proxy?url='+encodeURIComponent(segUrl)+'&referer='+encodeURIComponent(base);
+      // ALL segments go through proxy with the correct referer
+      const proxied=API+'/api/proxy?url='+encodeURIComponent(segUrl)+'&referer='+encodeURIComponent(referer);
       try{const r=await fetch(proxied,{signal:sig});if(r.ok)return await r.arrayBuffer();}catch(e){if(e.name==='AbortError')throw e;}
+      // Fallback: try direct (unlikely to work but worth trying)
       try{const r=await fetch(segUrl,{signal:sig});if(r.ok)return await r.arrayBuffer();}catch(e){if(e.name==='AbortError')throw e;}
       L(`Slot ${i+1}: seg failed`,'warn');return new ArrayBuffer(0);
     }));
