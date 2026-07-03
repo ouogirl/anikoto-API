@@ -301,25 +301,36 @@ async function dlAnime(i, item, sig) {
   }
   
   if (!sources.length) throw new Error('No sources found');
-  L(`Slot ${i+1}: ${sources.length} sources`, 'ok');
   if (epInfo) Slots[i].sub = `Episode ${epInfo.number}`;
   
-  // Pick source: prefer matching audio type with m3u8
+  // Log all available sources for debugging
+  const srcTypes = sources.filter(s=>s.m3u8).map(s=>`${s.server}(${s.type})`).join(', ');
+  L(`Slot ${i+1}: ${sources.length} sources: ${srcTypes}`, 'ok');
+  
+  // Pick source: match requested audio type (sub/dub), must have m3u8
   let pick = sources.filter(s => s.type === audio && s.m3u8);
-  if (!pick.length) pick = sources.filter(s => s.m3u8);
+  if (!pick.length) {
+    L(`Slot ${i+1}: No "${audio}" sources found, using any available`, 'warn');
+    pick = sources.filter(s => s.m3u8);
+  }
   if (!pick.length) throw new Error('No m3u8 sources');
   
-  const src = pick[0];
-  Slots[i].audio = src.type;
-  Slots[i].server = src.server;
+  // Prefer HD-1 or Vidstream servers (more reliable)
+  const preferred = pick.find(s => /HD|Vidstream/i.test(s.server)) || pick[0];
+  
+  Slots[i].audio = preferred.type;
+  Slots[i].server = preferred.server;
   uiSlot(i);
-  L(`Slot ${i+1}: ${src.server} (${src.type}) — m3u8 found`, 'ok');
+  L(`Slot ${i+1}: Selected ${preferred.server} (${preferred.type})`, 'ok');
   
-  const fn = safe(`${Slots[i].title || slug}_Ep${ep}_${src.type}`) + '.mp4';
+  const fn = safe(`${Slots[i].title || slug}_Ep${ep}_${preferred.type}`) + '.mp4';
   
-  // Try each matching source until one works (some CDNs may 403)
+  // Reorder: put preferred first, then rest of pick list
+  const tryOrder = [preferred, ...pick.filter(s => s !== preferred)];
+  
+  // Try each source until one works (some CDNs may 403)
   let lastErr = null;
-  for (const s of pick) {
+  for (const s of tryOrder) {
     const m3u8Url = s.proxyUrl ? (API + s.proxyUrl) : s.m3u8;
     const ref = s.referer || 'https://megaplay.buzz/';
     Slots[i].server = s.server;
