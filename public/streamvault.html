@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/mux.js@7.0.3/dist/mux.min.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -127,7 +127,7 @@ input:focus{border-color:rgba(168,85,247,.5)}
    StreamVault v6 — Core Engine
    Architecture: Single-page app hosted on user's Vercel deployment
    API: Teramoto anikoto-API (same-origin, no CORS issues)
-   Output: Standards-compliant fMP4 (H.264+AAC) via mux.js transmuxer
+   Output: .ts files (H.264+AAC MPEG-TS) — correct duration, plays everywhere
    ================================================================ */
 
 // ==================== Configuration ====================
@@ -606,7 +606,7 @@ async function downloadAnime(idx, item, signal) {
   throw lastError || new Error('All sources failed');
 }
 
-// ==================== HLS Download & Transmux ====================
+// ==================== HLS Download ====================
 async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal) {
   Slots[idx].status = 'Fetching playlist...';
   updateSlotUI(idx);
@@ -724,92 +724,46 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
     launch();
   });
 
-  // ========== Transmux TS → MP4 ==========
-  Slots[idx].status = 'Creating MP4...';
+  // ========== Combine segments ==========
+  Slots[idx].status = 'Combining...';
   updateSlotUI(idx);
 
-  const totalTSBytes = segmentData.reduce((a, c) => a + c.byteLength, 0);
-  let finalBlob;
+  const totalBytes = segmentData.reduce((a, c) => a + c.byteLength, 0);
 
-  if (typeof muxjs !== 'undefined' && totalTSBytes > 0) {
-    log(`Slot ${idx + 1}: Transmuxing ${fmtBytes(totalTSBytes)} TS → MP4...`, 'dl');
+  // Save as .ts — this is the honest, correct container for HLS segments.
+  // Contents: H.264 video + AAC audio in MPEG-TS container.
+  // Plays perfectly in: VLC (all platforms), Infuse (iOS), mpv, MX Player, 
+  // Windows Media Player, and most modern players.
+  const finalBlob = new Blob(segmentData, { type: 'video/mp2t' });
+  const tsFilename = filename.replace(/\.mp4$/, '.ts');
 
-    try {
-      finalBlob = await transmuxTStoMP4(segmentData);
-      log(`Slot ${idx + 1}: ✓ MP4 created (H.264 + AAC)`, 'ok');
-    } catch (txErr) {
-      log(`Slot ${idx + 1}: Transmux failed: ${txErr.message}, saving raw`, 'warn');
-      finalBlob = new Blob(segmentData, { type: 'video/mp4' });
-    }
-  } else {
-    log(`Slot ${idx + 1}: mux.js unavailable, saving raw TS`, 'warn');
-    finalBlob = new Blob(segmentData, { type: 'video/mp4' });
-  }
+  log(`Slot ${idx + 1}: ✅ Done! ${fmtBytes(totalBytes)} (H.264+AAC .ts)`, 'ok');
+  toast(`Downloaded: ${tsFilename}`);
 
-  // Complete
-  log(`Slot ${idx + 1}: ✅ Done! ${fmtBytes(totalTSBytes)}`, 'ok');
-  toast(`Downloaded: ${filename}`);
-
-  if (AUTO_SAVE) triggerBrowserDownload(finalBlob, filename);
+  if (AUTO_SAVE) triggerBrowserDownload(finalBlob, tsFilename);
 
   Done.unshift({
     title: (Slots[idx].title || 'Video') + ' ' + (Slots[idx].subtitle || ''),
-    filename, size: totalTSBytes, blob: finalBlob
+    filename: tsFilename, size: totalBytes, blob: finalBlob
   });
   DoneCount++;
-  TotalBytes += totalTSBytes;
+  TotalBytes += totalBytes;
   renderDone();
   updateStats();
 }
 
-// ==================== TS→MP4 Transmuxer ====================
-// Uses mux.js to remux MPEG-TS (H.264+AAC) into fragmented MP4.
-// Key: keepOriginalTimestamps:true preserves the sequential PTS from HLS
-// segments. We push all data, flush once, producing one cohesive fMP4.
-function transmuxTStoMP4(segmentChunks) {
-  return new Promise((resolve, reject) => {
-    const transmuxer = new muxjs.mp4.Transmuxer({
-      keepOriginalTimestamps: true,
-      remux: false
-    });
-
-    const outputParts = [];
-    let initSegmentSaved = false;
-
-    transmuxer.on('data', (segment) => {
-      if (!initSegmentSaved && segment.initSegment) {
-        const combined = new Uint8Array(segment.initSegment.byteLength + segment.data.byteLength);
-        combined.set(segment.initSegment, 0);
-        combined.set(segment.data, segment.initSegment.byteLength);
-        outputParts.push(combined);
-        initSegmentSaved = true;
-      } else if (segment.data && segment.data.byteLength > 0) {
-        outputParts.push(new Uint8Array(segment.data));
-      }
-    });
-
-    transmuxer.on('error', (err) => {
-      reject(new Error('Transmux error: ' + (err?.message || err)));
-    });
-
-    // Push ALL TS data as one continuous stream, then flush ONCE.
-    // HLS TS segments have sequential PTS — mux.js handles the
-    // continuity correctly when it sees the full stream.
-    for (const chunk of segmentChunks) {
-      if (chunk.byteLength > 0) {
-        transmuxer.push(chunk);
-      }
-    }
-    transmuxer.flush();
-
-    if (outputParts.length === 0) {
-      reject(new Error('Transmuxer produced no output'));
-      return;
-    }
-
-    resolve(new Blob(outputParts, { type: 'video/mp4' }));
-  });
-}
+// ==================== TS→MP4 Note ====================
+// Browser-side JS libraries (mux.js, mp4box.js) cannot produce a
+// standards-compliant MP4 from MPEG-TS with correct duration/seeking.
+// mux.js outputs fMP4 designed for MSE streaming, not file playback —
+// durations are always wrong (13h, 26h, etc).
+// 
+// The .ts output is the actual H.264+AAC content and plays correctly 
+// in VLC (iOS/Android/Windows/Mac), Infuse, mpv, MX Player, and 
+// Windows 11 Media Player.
+//
+// To convert to .mp4 on PC: ffmpeg -i video.ts -c copy video.mp4
+// (instant, no re-encoding, produces perfect MP4)
 
 // ==================== Direct File Download ====================
 async function downloadDirect(idx, url, title, signal) {
@@ -881,11 +835,7 @@ async function testApi() {
 loadCfg();
 log('StreamVault v6 ready', 'ok');
 log('Origin: ' + window.location.origin + ' | API: ' + (API || '(same origin)'), 'api');
-if (typeof muxjs !== 'undefined') {
-  log('mux.js loaded — MP4 output enabled (H.264+AAC)', 'ok');
-} else {
-  log('mux.js not available — output will be raw TS', 'warn');
-}
+log('Output: .ts files (H.264+AAC) — plays in VLC, Windows Media Player', 'ok');
 if (window.location.protocol === 'file:') {
   log('⚠ file:// detected — host on Vercel instead', 'err');
   document.getElementById('setupBanner').classList.remove('hidden');
