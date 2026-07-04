@@ -763,11 +763,14 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
 }
 
 // ==================== TS→MP4 Transmuxer ====================
+// Uses mux.js to remux MPEG-TS (H.264+AAC) into fragmented MP4.
+// Key: keepOriginalTimestamps:true preserves the sequential PTS from HLS
+// segments. We push all data, flush once, producing one cohesive fMP4.
 function transmuxTStoMP4(segmentChunks) {
   return new Promise((resolve, reject) => {
     const transmuxer = new muxjs.mp4.Transmuxer({
-      keepOriginalTimestamps: false,
-      baseMediaDecodeTime: 0
+      keepOriginalTimestamps: true,
+      remux: false
     });
 
     const outputParts = [];
@@ -775,14 +778,12 @@ function transmuxTStoMP4(segmentChunks) {
 
     transmuxer.on('data', (segment) => {
       if (!initSegmentSaved && segment.initSegment) {
-        // First output: ftyp+moov (init) combined with first moof+mdat
         const combined = new Uint8Array(segment.initSegment.byteLength + segment.data.byteLength);
         combined.set(segment.initSegment, 0);
         combined.set(segment.data, segment.initSegment.byteLength);
         outputParts.push(combined);
         initSegmentSaved = true;
-      } else {
-        // Subsequent fragments: moof+mdat only
+      } else if (segment.data && segment.data.byteLength > 0) {
         outputParts.push(new Uint8Array(segment.data));
       }
     });
@@ -791,13 +792,15 @@ function transmuxTStoMP4(segmentChunks) {
       reject(new Error('Transmux error: ' + (err?.message || err)));
     });
 
-    // Feed each TS segment individually (preserves segment boundaries)
+    // Push ALL TS data as one continuous stream, then flush ONCE.
+    // HLS TS segments have sequential PTS — mux.js handles the
+    // continuity correctly when it sees the full stream.
     for (const chunk of segmentChunks) {
       if (chunk.byteLength > 0) {
         transmuxer.push(chunk);
-        transmuxer.flush(); // Flush after each segment for proper timestamp handling
       }
     }
+    transmuxer.flush();
 
     if (outputParts.length === 0) {
       reject(new Error('Transmuxer produced no output'));
