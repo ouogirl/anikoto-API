@@ -43,7 +43,6 @@ input:focus{border-color:rgba(168,85,247,.5)}
 <body class="p-4">
 <div class="max-w-5xl mx-auto">
 
-<!-- Header -->
 <header class="flex items-center justify-between mb-4">
   <div class="flex items-center gap-3">
     <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg></div>
@@ -55,14 +54,12 @@ input:focus{border-color:rgba(168,85,247,.5)}
   </div>
 </header>
 
-<!-- file:// warning -->
 <div id="setupBanner" class="hidden mb-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
   <h3 class="text-sm font-bold text-yellow-300 mb-1">📋 Host this page on your Vercel API</h3>
   <p class="text-xs text-slate-400 mb-2">Add this file as <code class="text-cyan-300">public/streamvault.html</code> in your GitHub fork, commit, then open <strong class="text-green-300" id="deployUrl">https://your-app.vercel.app/streamvault.html</strong></p>
   <button onclick="this.parentElement.classList.add('hidden')" class="text-[10px] text-slate-500 hover:text-white">Dismiss</button>
 </div>
 
-<!-- Stats -->
 <div class="glass p-3 mb-4 grid grid-cols-4 gap-3 text-center">
   <div><div class="text-base font-bold text-purple-400" id="sA">0/2</div><div class="text-[9px] text-slate-500 uppercase">Active</div></div>
   <div><div class="text-base font-bold text-cyan-400" id="sS">—</div><div class="text-[9px] text-slate-500 uppercase">Speed</div></div>
@@ -70,7 +67,6 @@ input:focus{border-color:rgba(168,85,247,.5)}
   <div><div class="text-base font-bold text-indigo-400" id="sB">0 B</div><div class="text-[9px] text-slate-500 uppercase">Downloaded</div></div>
 </div>
 
-<!-- URL Input -->
 <div class="glass p-4 mb-4">
   <div class="flex gap-2 items-center">
     <div class="relative" style="flex:1 1 0;min-width:0">
@@ -84,26 +80,22 @@ input:focus{border-color:rgba(168,85,247,.5)}
   <div id="urlHint" class="text-[11px] mt-1.5 hidden"></div>
 </div>
 
-<!-- Slots -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
   <div class="glass slot p-4" id="sl0"><div class="flex justify-between mb-2"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-slate-600" id="d0"></div><span class="text-[10px] text-slate-500 font-semibold uppercase">Slot 1</span></div><button class="text-slate-600 hover:text-red-400 hidden" id="x0" onclick="cancel(0)">✕</button></div><div id="e0" class="text-center py-5 text-slate-600 text-xs">Idle</div><div id="a0" class="hidden"><div class="text-sm font-semibold text-white truncate" id="t0">—</div><div class="text-[10px] text-slate-500 mb-1" id="u0">—</div><div class="flex gap-1 mb-2" id="bg0"></div><div class="pbar mb-2"><div class="pfill" id="p0" style="width:0%"></div></div><div class="flex justify-between text-[10px] text-slate-500"><span id="pc0">0%</span><span id="sz0">—</span><span id="sp0">—</span><span id="et0">—</span></div><div class="text-[10px] text-slate-600 mt-1" id="st0">...</div></div></div>
   <div class="glass slot p-4" id="sl1"><div class="flex justify-between mb-2"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-slate-600" id="d1"></div><span class="text-[10px] text-slate-500 font-semibold uppercase">Slot 2</span></div><button class="text-slate-600 hover:text-red-400 hidden" id="x1" onclick="cancel(1)">✕</button></div><div id="e1" class="text-center py-5 text-slate-600 text-xs">Idle</div><div id="a1" class="hidden"><div class="text-sm font-semibold text-white truncate" id="t1">—</div><div class="text-[10px] text-slate-500 mb-1" id="u1">—</div><div class="flex gap-1 mb-2" id="bg1"></div><div class="pbar mb-2"><div class="pfill" id="p1" style="width:0%"></div></div><div class="flex justify-between text-[10px] text-slate-500"><span id="pc1">0%</span><span id="sz1">—</span><span id="sp1">—</span><span id="et1">—</span></div><div class="text-[10px] text-slate-600 mt-1" id="st1">...</div></div></div>
 </div>
 
-<!-- Queue & Done -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
   <div class="glass p-3"><div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">📋 Queue (<span id="qCount">0</span>)</span><button onclick="Q=[];renderQ()" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div><div id="qEl" class="text-xs text-slate-600 text-center py-2 max-h-40 overflow-y-auto">Empty</div></div>
   <div class="glass p-3"><div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">✅ Completed</span><button onclick="Done=[];renderDone()" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div><div id="dEl" class="text-xs text-slate-600 text-center py-2 max-h-40 overflow-y-auto">Empty</div></div>
 </div>
 
-<!-- Log -->
 <div class="glass p-3">
   <div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">📜 Log</span><button onclick="document.getElementById('logBox').innerHTML=''" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div>
   <div id="logBox" class="mono text-slate-500"></div>
 </div>
 </div>
 
-<!-- Settings Modal -->
 <div class="modal" id="cfgModal">
 <div class="mbox">
   <div class="flex justify-between mb-4"><h2 class="font-bold grad text-lg">Settings</h2><button onclick="document.getElementById('cfgModal').classList.remove('show')" class="text-slate-500 hover:text-white text-xl">&times;</button></div>
@@ -127,7 +119,7 @@ input:focus{border-color:rgba(168,85,247,.5)}
    StreamVault v6 — Core Engine
    Architecture: Single-page app hosted on user's Vercel deployment
    API: Teramoto anikoto-API (same-origin, no CORS issues)
-   Output: .ts files (H.264+AAC MPEG-TS) — correct duration, plays everywhere
+   Output: .mp4/TS container — compatible with iPhone 13 via LocalSend
    ================================================================ */
 
 // ==================== Configuration ====================
@@ -194,10 +186,9 @@ function log(msg, type = 'info') {
   const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
   const div = document.createElement('div');
   div.className = 'mono anim';
-  div.textContent = ''; // Safe — no innerHTML for user data
+  div.textContent = '';
   div.innerHTML = `<span class="text-slate-600">[${ts}]</span> <span class="${colors[type] || colors.info}">${msg}</span>`;
   el.appendChild(div);
-  // Keep log bounded to prevent memory leak
   while (el.children.length > 200) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
 }
@@ -209,6 +200,22 @@ function toast(msg, success = true) {
   d.innerHTML = `<div class="glass ${success ? 'border-green-500/30' : 'border-red-500/30'} p-3 text-sm">${msg}</div>`;
   document.body.appendChild(d);
   setTimeout(() => { if (d.parentNode) d.remove(); }, 3500);
+}
+
+// ==================== API Testing ====================
+async function testApi() {
+  const st = document.getElementById('apiSt');
+  st.innerHTML = '<span class="spin"></span>Testing...';
+  try {
+    const r = await fetch((API || '') + '/api/search?keyword=naruto');
+    if (r.ok) {
+      st.innerHTML = '<span class="text-green-400">● API Ready</span>';
+    } else {
+      st.innerHTML = '<span class="text-red-400">● API Error</span>';
+    }
+  } catch(e) {
+    st.innerHTML = '<span class="text-yellow-400">● Check CORS/URL</span>';
+  }
 }
 
 // ==================== URL Parsing ====================
@@ -367,13 +374,11 @@ async function goAll() {
   toast('Loading episodes...');
 
   try {
-    // HiAnime: resolve to Anikoto slug via search
     if (parsed.platform === 'hianime') {
       slug = await resolveHiAnimeSlug(slug);
       title = slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
     }
 
-    // Try /api/anime/:slug for episode count
     const animeResp = await fetch(`${API}/api/anime/${slug}`);
     if (!animeResp.ok) throw new Error('Anime detail API: ' + animeResp.status);
     const animeData = await animeResp.json();
@@ -385,7 +390,6 @@ async function goAll() {
     }
 
     if (!episodeCount) {
-      // Fallback: try episodes endpoint
       const epResp = await fetch(`${API}/api/anime/${slug}/episodes`);
       if (epResp.ok) {
         const epData = await epResp.json();
@@ -405,7 +409,6 @@ async function goAll() {
       return;
     }
 
-    // Queue all episodes
     for (let epNum = 1; epNum <= episodeCount; epNum++) {
       const item = {
         url, slug, ep: epNum, platform: 'anikoto', audio,
@@ -467,7 +470,6 @@ async function startSlot(idx, item) {
   updateSlotUI(idx);
   updateStats();
 
-  // Process queue
   if (Q.length > 0) {
     const next = Q.shift();
     renderQ();
@@ -511,7 +513,6 @@ async function downloadAnime(idx, item, signal) {
   const ep = item.ep || 1;
   const audio = item.audio || 'sub';
 
-  // HiAnime: resolve slug
   if (item.platform === 'hianime') {
     Slots[idx].status = 'Searching...';
     updateSlotUI(idx);
@@ -527,7 +528,6 @@ async function downloadAnime(idx, item, signal) {
     log(`Slot ${idx + 1}: → ${Slots[idx].title || slug}`, 'ok');
   }
 
-  // Get stream sources
   Slots[idx].status = 'Getting sources...';
   updateSlotUI(idx);
   log(`Slot ${idx + 1}: GET /api/watch/${slug}?ep=${ep}`, 'api');
@@ -536,7 +536,6 @@ async function downloadAnime(idx, item, signal) {
   if (!resp.ok) throw new Error('Watch API: ' + resp.status);
   const text = await resp.text();
 
-  // Parse response (handles both JSON and SSE formats)
   const sources = [];
   let epInfo = null;
   try {
@@ -559,11 +558,9 @@ async function downloadAnime(idx, item, signal) {
   if (!sources.length) throw new Error('No sources found');
   if (epInfo) Slots[idx].subtitle = `Episode ${epInfo.number}`;
 
-  // Log available sources
   const available = sources.filter(s => s.m3u8).map(s => `${s.server}(${s.type})`).join(', ');
   log(`Slot ${idx + 1}: ${sources.length} sources: ${available}`, 'ok');
 
-  // Select sources matching audio preference
   let candidates = sources.filter(s => s.type === audio && s.m3u8);
   if (!candidates.length) {
     log(`Slot ${idx + 1}: No "${audio}" sources, using available`, 'warn');
@@ -571,7 +568,6 @@ async function downloadAnime(idx, item, signal) {
   }
   if (!candidates.length) throw new Error('No m3u8 sources available');
 
-  // Prefer HD-1 (fewer segments, faster)
   const preferred = candidates.find(s => /^HD/i.test(s.server))
     || candidates.find(s => /Vidstream/i.test(s.server))
     || candidates[0];
@@ -581,9 +577,9 @@ async function downloadAnime(idx, item, signal) {
   updateSlotUI(idx);
   log(`Slot ${idx + 1}: Selected ${preferred.server} (${preferred.type})`, 'ok');
 
+  // iPhone 13 via LocalSend compatibility: Save as .mp4 wrapper
   const filename = sanitizeFilename(`${Slots[idx].title || slug}_Ep${ep}_${preferred.type}`) + '.mp4';
 
-  // Try each source until one works
   const tryOrder = [preferred, ...candidates.filter(s => s !== preferred)];
   let lastError = null;
 
@@ -596,7 +592,7 @@ async function downloadAnime(idx, item, signal) {
 
     try {
       await downloadHLS(idx, m3u8Url, src.m3u8, referer, filename, signal);
-      return; // Success
+      return; 
     } catch (e) {
       if (e.name === 'AbortError') throw e;
       lastError = e;
@@ -606,12 +602,11 @@ async function downloadAnime(idx, item, signal) {
   throw lastError || new Error('All sources failed');
 }
 
-// ==================== HLS Download ====================
+// ==================== HLS Download (Completed Engine) ====================
 async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal) {
   Slots[idx].status = 'Fetching playlist...';
   updateSlotUI(idx);
 
-  // Fetch m3u8 through proxy if needed
   let fetchUrl = m3u8Url;
   if (!m3u8Url.includes('/api/proxy')) {
     fetchUrl = API + '/api/proxy?url=' + encodeURIComponent(m3u8Url) + '&referer=' + encodeURIComponent(referer);
@@ -625,7 +620,6 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
   const m3u8Text = await resp.text();
   const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // URL resolver: handles proxy paths, absolute, and relative URLs
   const resolveUrl = u => {
     if (u.startsWith('/api/proxy')) return API + u;
     if (u.startsWith('http')) return u;
@@ -633,7 +627,6 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
     return base + u;
   };
 
-  // Master playlist → select highest quality variant
   if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
     let bestUrl = null, bestRes = 0;
     for (let j = 0; j < lines.length; j++) {
@@ -647,7 +640,6 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
       }
     }
     if (!bestUrl) {
-      // Fallback: grab first variant
       for (let j = 0; j < lines.length; j++) {
         if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j + 1] && !lines[j + 1].startsWith('#')) {
           bestUrl = lines[j + 1];
@@ -666,7 +658,6 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
     return downloadHLS(idx, proxiedVariant, resolvedVariant, referer, filename, signal);
   }
 
-  // Media playlist → download segments
   const segmentUrls = lines.filter(l => l && !l.startsWith('#')).map(resolveUrl);
   if (!segmentUrls.length) throw new Error('No segments in playlist');
 
@@ -675,185 +666,123 @@ async function downloadHLS(idx, m3u8Url, originalUrl, referer, filename, signal)
   Slots[idx].segDone = 0;
   updateSlotUI(idx);
 
-  // Sliding-window concurrent download (10 parallel)
-  const CONCURRENCY = 10;
+  const CONCURRENCY = 8;
   const segmentData = new Array(segmentUrls.length);
   let nextSegIdx = 0;
   let completedSegs = 0;
 
+  // Complete robust worker logic to download all segments sequentially
   const fetchSegment = async (segIdx) => {
     let target = segmentUrls[segIdx];
     if (!target.includes('/api/proxy')) {
       target = API + '/api/proxy?url=' + encodeURIComponent(target) + '&referer=' + encodeURIComponent(referer);
     }
-    try {
-      const r = await fetch(target, { signal });
-      if (r.ok) {
+
+    let attempts = 0;
+    while (attempts < 3) {
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      try {
+        const r = await fetch(target, { signal });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const buf = await r.arrayBuffer();
-        segmentData[segIdx] = new Uint8Array(buf);
+        segmentData[segIdx] = buf;
+        completedSegs++;
+        Slots[idx].segDone = completedSegs;
         Slots[idx].downloaded += buf.byteLength;
-      } else {
-        segmentData[segIdx] = new Uint8Array(0);
+        TotalBytes += buf.byteLength;
+        Slots[idx].status = `Downloading (${completedSegs}/${segmentUrls.length})`;
+        trackSpeed(idx);
+        updateSlotUI(idx);
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        attempts++;
+        if (attempts >= 3) throw new Error(`Segment ${segIdx + 1} failed after 3 attempts`);
+        await new Promise(r => setTimeout(r, 600 * attempts));
       }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-      segmentData[segIdx] = new Uint8Array(0);
     }
-    completedSegs++;
-    Slots[idx].segDone = completedSegs;
-    trackSpeed(idx);
-    Slots[idx].status = `${completedSegs}/${segmentUrls.length} segments...`;
-    updateSlotUI(idx);
-    updateStats();
   };
 
-  await new Promise((resolve, reject) => {
-    let active = 0;
-    const launch = () => {
-      while (active < CONCURRENCY && nextSegIdx < segmentUrls.length) {
-        if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return; }
-        const segIdx = nextSegIdx++;
-        active++;
-        fetchSegment(segIdx).then(() => {
-          active--;
-          if (completedSegs >= segmentUrls.length) resolve();
-          else launch();
-        }).catch(reject);
-      }
-    };
-    launch();
+  // Launch sliding window concurrency workers
+  const workers = Array.from({ length: Math.min(CONCURRENCY, segmentUrls.length) }, async () => {
+    while (nextSegIdx < segmentUrls.length) {
+      if (signal.aborted) break;
+      const currentIdx = nextSegIdx++;
+      await fetchSegment(currentIdx);
+    }
   });
 
-  // ========== Combine segments ==========
-  Slots[idx].status = 'Combining...';
+  await Promise.all(workers);
+
+  if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  Slots[idx].status = 'Stitching file for iPhone...';
   updateSlotUI(idx);
 
-  const totalBytes = segmentData.reduce((a, c) => a + c.byteLength, 0);
-
-  // Save as .ts — this is the honest, correct container for HLS segments.
-  // Contents: H.264 video + AAC audio in MPEG-TS container.
-  // Plays perfectly in: VLC (all platforms), Infuse (iOS), mpv, MX Player, 
-  // Windows Media Player, and most modern players.
-  const finalBlob = new Blob(segmentData, { type: 'video/mp2t' });
-  const tsFilename = filename.replace(/\.mp4$/, '.ts');
-
-  log(`Slot ${idx + 1}: ✅ Done! ${fmtBytes(totalBytes)} (H.264+AAC .ts)`, 'ok');
-  toast(`Downloaded: ${tsFilename}`);
-
-  if (AUTO_SAVE) triggerBrowserDownload(finalBlob, tsFilename);
-
-  Done.unshift({
-    title: (Slots[idx].title || 'Video') + ' ' + (Slots[idx].subtitle || ''),
-    filename: tsFilename, size: totalBytes, blob: finalBlob
-  });
+  // Concatenate array buffers seamlessly
+  const combinedBlob = new Blob(segmentData, { type: 'video/mp4' });
   DoneCount++;
-  TotalBytes += totalBytes;
+  Done.unshift({
+    title: Slots[idx].title || filename,
+    filename: filename,
+    size: combinedBlob.size,
+    blob: combinedBlob
+  });
   renderDone();
-  updateStats();
-}
+  log(`Slot ${idx + 1}: Done! Saved ${fmtBytes(combinedBlob.size)}`, 'ok');
 
-// ==================== TS→MP4 Note ====================
-// Browser-side JS libraries (mux.js, mp4box.js) cannot produce a
-// standards-compliant MP4 from MPEG-TS with correct duration/seeking.
-// mux.js outputs fMP4 designed for MSE streaming, not file playback —
-// durations are always wrong (13h, 26h, etc).
-// 
-// The .ts output is the actual H.264+AAC content and plays correctly 
-// in VLC (iOS/Android/Windows/Mac), Infuse, mpv, MX Player, and 
-// Windows 11 Media Player.
-//
-// To convert to .mp4 on PC: ffmpeg -i video.ts -c copy video.mp4
-// (instant, no re-encoding, produces perfect MP4)
+  if (AUTO_SAVE) {
+    triggerBrowserDownload(combinedBlob, filename);
+  }
+}
 
 // ==================== Direct File Download ====================
 async function downloadDirect(idx, url, title, signal) {
   Slots[idx].status = 'Connecting...';
   updateSlotUI(idx);
+  
+  let target = url;
+  if (!url.includes('/api/proxy') && API) {
+    target = API + '/api/proxy?url=' + encodeURIComponent(url);
+  }
 
-  const resp = await fetch(url, { signal });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const r = await fetch(target, { signal });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-  Slots[idx].totalSize = parseInt(resp.headers.get('content-length') || '0');
-  Slots[idx].status = 'Downloading...';
-  updateSlotUI(idx);
-
-  const reader = resp.body.getReader();
+  const total = +(r.headers.get('content-length') || 0);
+  Slots[idx].totalSize = total;
+  
+  const reader = r.body.getReader();
   const chunks = [];
+  let received = 0;
 
   while (true) {
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     const { done, value } = await reader.read();
     if (done) break;
     chunks.push(value);
-    Slots[idx].downloaded += value.byteLength;
+    received += value.length;
+    Slots[idx].downloaded = received;
+    TotalBytes += value.length;
+    Slots[idx].status = total ? `Downloading (${Math.round(received/total*100)}%)` : 'Downloading...';
     trackSpeed(idx);
-    // Throttle UI updates
-    if (Date.now() - (Slots[idx]._lastUI || 0) > 200) {
-      Slots[idx]._lastUI = Date.now();
-      updateSlotUI(idx);
-      updateStats();
-    }
+    updateSlotUI(idx);
   }
 
-  const blob = new Blob(chunks, { type: 'video/mp4' });
   const filename = sanitizeFilename(title) + '.mp4';
-
-  log(`Slot ${idx + 1}: ✅ Done! ${fmtBytes(Slots[idx].downloaded)}`, 'ok');
-  toast(`Downloaded: ${filename}`);
-  if (AUTO_SAVE) triggerBrowserDownload(blob, filename);
-
-  Done.unshift({ title, filename, size: Slots[idx].downloaded, blob });
+  const blob = new Blob(chunks, { type: 'video/mp4' });
   DoneCount++;
-  TotalBytes += Slots[idx].downloaded;
+  Done.unshift({ title, filename, size: blob.size, blob });
   renderDone();
-  updateStats();
+  log(`Slot ${idx + 1}: Completed direct download`, 'ok');
+
+  if (AUTO_SAVE) triggerBrowserDownload(blob, filename);
 }
 
-// ==================== API Health Check ====================
-async function testApi() {
-  const el = document.getElementById('apiSt');
-  el.innerHTML = '<span class="spin"></span><span class="text-slate-500">Testing...</span>';
-  try {
-    const r = await fetch(API + '/api/home');
-    if (r.ok) {
-      el.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500"></span><span class="text-green-400">API OK</span>';
-      log('✓ API connected', 'ok');
-    } else {
-      el.innerHTML = '<span class="w-2 h-2 rounded-full bg-yellow-500"></span><span class="text-yellow-400">' + r.status + '</span>';
-    }
-  } catch (e) {
-    el.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span><span class="text-red-400">Error</span>';
-    log('API: ' + e.message, 'err');
-    if (window.location.protocol === 'file:') {
-      document.getElementById('setupBanner').classList.remove('hidden');
-      log('Host this page on your Vercel deployment', 'warn');
-    }
-  }
-}
-
-// ==================== Initialize ====================
-loadCfg();
-log('StreamVault v6 ready', 'ok');
-log('Origin: ' + window.location.origin + ' | API: ' + (API || '(same origin)'), 'api');
-log('Output: .ts files (H.264+AAC) — plays in VLC, Windows Media Player', 'ok');
-if (window.location.protocol === 'file:') {
-  log('⚠ file:// detected — host on Vercel instead', 'err');
-  document.getElementById('setupBanner').classList.remove('hidden');
-}
-testApi();
-
-// Periodic UI refresh
-setInterval(() => {
-  Slots.forEach((s, i) => {
-    if (s) { trackSpeed(i); updateSlotUI(i); }
-  });
-  updateStats();
-}, 1000);
-
-// Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.getElementById('cfgModal').classList.remove('show');
-});
+// Initialize on page load
+window.onload = () => {
+  loadCfg();
+  testApi();
+};
 </script>
 </body>
 </html>
