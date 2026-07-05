@@ -27,7 +27,7 @@
     }
     .container {
       width: 100%;
-      max-width: 900px;
+      max-width: 950px;
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -45,12 +45,30 @@
       margin-bottom: 15px;
     }
     .header h2 { margin: 0; }
+    
+    /* Controls Area */
+    .controls-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
     .input-group {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+    select {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: white;
+      outline: none;
+      cursor: pointer;
     }
     input[type="text"] {
       flex: 1;
+      min-width: 250px;
       padding: 10px 15px;
       border-radius: 8px;
       border: 1px solid #334155;
@@ -70,15 +88,18 @@
       font-weight: bold;
       cursor: pointer;
       transition: background 0.2s;
+      white-space: nowrap;
     }
     button:hover { background: #2563eb; }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #059669; }
     
     /* Log Window */
     .log-window {
       background: #020617;
       padding: 15px;
       border-radius: 8px;
-      height: 150px;
+      height: 180px;
       overflow-y: auto;
       font-family: monospace;
       font-size: 13px;
@@ -137,9 +158,16 @@
         <label><input type="checkbox" id="autoSave" checked> Auto-Save File</label>
       </div>
     </div>
-    <div class="input-group">
-      <input type="text" id="urlInput" placeholder="Enter video URL (e.g., https://anikoto.cz/watch/...)">
-      <button onclick="startTask()">Download</button>
+    <div class="controls-wrapper">
+      <div class="input-group">
+        <select id="audioOption">
+          <option value="sub">Sub</option>
+          <option value="dub">Dub</option>
+        </select>
+        <input type="text" id="urlInput" placeholder="Enter video URL (e.g., https://anikoto.cz/watch/.../ep-1)">
+        <button onclick="startSingle()">Download 1</button>
+        <button class="btn-success" onclick="startBatch()">Download All Episodes</button>
+      </div>
     </div>
   </div>
 
@@ -162,7 +190,7 @@
   // ==========================================
   // GLOBALS & CONFIG
   // ==========================================
-  const API = "https://anikoto-api-ten.vercel.app"; // Your backend API
+  const API = "https://anikoto-api-ten.vercel.app"; 
   let Slots = [];
   let Done = [];
   let TotalBytes = 0;
@@ -171,6 +199,7 @@
   const UI = {
     log: document.getElementById('logWindow'),
     url: document.getElementById('urlInput'),
+    audioOpt: document.getElementById('audioOption'),
     slots: document.getElementById('slotsContainer'),
     slotsPanel: document.getElementById('slotsPanel'),
     autoSave: document.getElementById('autoSave')
@@ -225,7 +254,8 @@
         <span id="size-${idx}">0 MB</span>
       </div>
     `;
-    UI.slots.appendChild(div);
+    // Insert at top so newest is visible
+    UI.slots.insertBefore(div, UI.slots.firstChild);
   }
 
   function updateSlotUI(idx) {
@@ -243,13 +273,58 @@
   }
 
   // ==========================================
-  // MAIN LOGIC
+  // ORCHESTRATION (SINGLE & BATCH)
   // ==========================================
-  async function startTask() {
+  async function startSingle() {
     const url = UI.url.value.trim();
     if (!url) return alert('Please enter a URL');
-    UI.url.value = '';
+    UI.url.value = ''; // Clear after starting
+    
+    const audioPref = UI.audioOpt.value;
+    await executeDownload(url, audioPref);
+  }
 
+  async function startBatch() {
+    const baseUrlInput = UI.url.value.trim();
+    if (!baseUrlInput) return alert('Please enter a starting URL (e.g. ends in /ep-1)');
+    
+    // Parse URL to find the episode number format (e.g. /ep-1, -ep1, /episode-1)
+    const match = baseUrlInput.match(/(.*\/ep-)(\d+)(.*)/i);
+    
+    if (!match) {
+       log("Could not detect 'ep-X' pattern in URL. Falling back to single download.", 'warn');
+       return startSingle();
+    }
+
+    const prefix = match[1]; // Everything before the number (e.g., .../watch/.../ep-)
+    let currentEp = parseInt(match[2], 10);
+    const suffix = match[3]; // Everything after the number (usually empty)
+    
+    const audioPref = UI.audioOpt.value;
+    log(`Starting batch download from episode ${currentEp} (${audioPref.toUpperCase()})...`, 'info');
+    UI.url.value = ''; // Clear input
+
+    let keepGoing = true;
+    while (keepGoing) {
+       const targetUrl = `${prefix}${currentEp}${suffix}`;
+       log(`Queueing: ${targetUrl}`, 'info');
+       
+       // Wait for the download to finish before starting the next one
+       const success = await executeDownload(targetUrl, audioPref);
+       
+       if (!success) {
+          log(`Batch download ended. (Reached last episode or encountered a hard error).`, 'warn');
+          keepGoing = false;
+       } else {
+          currentEp++;
+       }
+    }
+  }
+
+  // ==========================================
+  // CORE EXTRACTION LOGIC
+  // ==========================================
+  async function executeDownload(url, audioPref) {
     const idx = Slots.length;
     const controller = new AbortController();
     Slots.push({
@@ -265,31 +340,43 @@
     log(`Slot ${idx + 1}: Starting extraction for ${url}`);
 
     try {
-      // 1. EXTRACT DATA FROM API
-      const extractUrl = `${API}/api/extract?url=${encodeURIComponent(url)}`;
+      // 1. EXTRACT DATA FROM API (appending audio preference)
+      const extractUrl = `${API}/api/extract?url=${encodeURIComponent(url)}&type=${audioPref}`;
       const res = await fetch(extractUrl, { signal: controller.signal });
       
-      if (!res.ok) throw new Error(`Extraction HTTP ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error(`HTTP 404: Episode/Data not found. Either the API route is missing, or this episode does not exist.`);
+        }
+        throw new Error(`Extraction HTTP ${res.status}`);
+      }
+      
       const data = await res.json();
 
-      // Adapt based on your exact API response structure
       const m3u8Url = data.m3u8 || data.url || (data.sources && data.sources[0]?.file);
       if (!m3u8Url) throw new Error("Could not find m3u8 stream in API response");
 
       const referer = data.referer || data.headers?.Referer || "";
-      let filename = data.title ? data.title.replace(/[^a-z0-9]/gi, '_') : `video_${Date.now()}`;
+      
+      // Build an intelligent filename if missing
+      let titleFallback = url.split('/').pop() || `video_${Date.now()}`;
+      let filename = data.title ? data.title.replace(/[^a-z0-9]/gi, '_') : titleFallback;
+      filename = `${filename}_${audioPref.toUpperCase()}`; // Append SUB/DUB to name
       if (!filename.endsWith('.ts')) filename += '.ts';
 
       log(`Slot ${idx + 1}: Found playlist, beginning download...`, 'success');
       
       // 2. DOWNLOAD HLS STREAM
       await downloadHLS(idx, m3u8Url, referer, filename, controller.signal);
+      return true; // Return success to batch processor
 
     } catch (err) {
-      if (err.name === 'AbortError') return;
-      Slots[idx].status = `Error: ${err.message}`;
+      if (err.name === 'AbortError') return false;
+      Slots[idx].status = `Failed: ${err.message}`;
+      document.getElementById(`status-${idx}`).style.color = 'var(--error)';
       updateSlotUI(idx);
       log(`Slot ${idx + 1}: ${err.message}`, 'error');
+      return false; // Return fail to batch processor to stop looping
     }
   }
 
@@ -305,30 +392,27 @@
 
     let resp;
     try {
-      // Attempt 1: Route through the API Proxy
       resp = await fetch(fetchUrl, { signal });
       if (!resp.ok) throw new Error(`Proxy HTTP ${resp.status}`);
     } catch (proxyErr) {
       if (signal.aborted) throw proxyErr;
-      log(`Slot ${idx + 1}: Proxy blocked (${proxyErr.message}), trying direct connection...`, 'warn');
+      log(`Slot ${idx + 1}: Proxy blocked, trying direct connection...`, 'warn');
       
-      // Attempt 2: Direct connection fallback (bypasses proxy CORS if possible)
       resp = await fetch(m3u8Url, { signal });
-      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. You may be rate-limited or require a custom proxy.`);
+      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. You may be rate-limited.`);
     }
 
     const m3u8Text = await resp.text();
     const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
-
     const resolveUrl = u => u.startsWith('http') ? u : m3u8Url.replace(/[^/]*$/, '') + u;
 
-    // Handle Master Playlists (Auto-select highest resolution)
+    // Handle Master Playlists
     if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
       let bestUrl = null;
       for (let j = 0; j < lines.length; j++) {
         if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j+1]) {
           bestUrl = lines[j+1]; 
-          break; // Grabs the first (usually highest) resolution
+          break; // Grabs first resolution
         }
       }
       return downloadHLS(idx, resolveUrl(bestUrl), referer, filename, signal);
@@ -358,15 +442,12 @@
         
         try {
           let r = await fetch(target, { signal });
-          
-          // Direct fallback for chunks if proxy fails
           if (!r.ok) {
              r = await fetch(segmentUrls[currentIdx], { signal });
              if (!r.ok) throw new Error(`HTTP ${r.status}`);
           }
 
           const buf = await r.arrayBuffer();
-          
           segmentData[currentIdx] = new Uint8Array(buf);
           completedSegs++;
           Slots[idx].segDone = completedSegs;
@@ -375,7 +456,7 @@
           
           updateSlotUI(idx);
         } catch (err) {
-          log(`Slot ${idx + 1}: Chunk ${currentIdx} failed, halting download.`, 'error');
+          log(`Slot ${idx + 1}: Chunk ${currentIdx} failed.`, 'error');
           throw err;
         }
       }
@@ -384,7 +465,6 @@
     Slots[idx].status = 'Downloading segments...';
     updateSlotUI(idx);
 
-    // Run parallel chunk downloads
     const workers = Array(Math.min(CONCURRENCY, segmentUrls.length)).fill(null).map(fetchSegment);
     await Promise.all(workers);
 
@@ -393,7 +473,6 @@
     Slots[idx].status = 'Compiling file...';
     updateSlotUI(idx);
 
-    // Merge chunks into one file
     const totalLength = segmentData.reduce((acc, val) => acc + (val ? val.length : 0), 0);
     const merged = new Uint8Array(totalLength);
     let offset = 0;
