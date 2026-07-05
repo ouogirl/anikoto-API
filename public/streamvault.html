@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mux.js/dist/mux.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{--bg:#07070f;--card:rgba(13,13,25,.75);--border:rgba(255,255,255,.06);--glow:rgba(139,92,246,.15)}
@@ -280,7 +279,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    StreamVault v6 — Core Engine
    Architecture: Single-page app hosted on user's Vercel deployment
    API: Teramoto anikoto-API (same-origin, no CORS issues)
-   Output: .ts files (H.264+AAC MPEG-TS) — swapped to .mp4 for iOS Gallery compatibility
+   Output: transmuxed standard .mp4 files (H.264+AAC) for iOS Gallery compatibility
    ================================================================ */
 
 const ORIGIN = window.location.origin;
@@ -385,74 +384,52 @@ function renderDone() {
   if (!Done.length) { el.innerHTML = '<span class="text-slate-700">No completed downloads</span>'; return; }
   el.innerHTML = Done.map((d,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80"><svg class="w-3 h-3 inline mr-1 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob?`<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>`:''}</div>`).join('');
 }
-function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownloadDirect(d.blob,d.filename); else toast('File expired',false); }
+function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
 
-function triggerBrowserDownload(blob, filename) {
-  // For non-TS files (like already-MP4 from direct download), download directly
-  triggerBrowserDownloadDirect(blob, filename);
+function toMp4Filename(filename) {
+  return filename.toLowerCase().endsWith('.ts') ? filename.slice(0, -3) + '.mp4' : filename;
 }
 
-function triggerBrowserDownloadDirect(blob, filename) {
-  const file = new File([blob], filename, { type: 'video/mp4', lastModified: Date.now() });
+function triggerBrowserDownload(blob, filename) {
+  const targetFilename = toMp4Filename(filename);
+  const targetMimeType = targetFilename.toLowerCase().endsWith('.mp4') ? 'video/mp4' : (blob.type || 'application/octet-stream');
+  const file = new File([blob], targetFilename, { type: targetMimeType, lastModified: Date.now() });
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');
   a.href = url;
-  a.download = filename;
+  a.download = targetFilename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 180000);
 }
 
-function transmuxTsToMp4(tsBlob) {
-  return new Promise((resolve, reject) => {
-    try {
-      const transmuxer = new muxjs.mp4.Transmuxer();
-      const mp4Chunks = [];
-      let initSegment = null;
-
-      transmuxer.on('data', function(segment) {
-        if (segment.initSegment && segment.initSegment.byteLength > 0) {
-          initSegment = new Uint8Array(segment.initSegment);
-        }
-        if (segment.data && segment.data.byteLength > 0) {
-          mp4Chunks.push(new Uint8Array(segment.data));
-        }
+let toMp4Loader = null;
+async function loadToMp4() {
+  if (window.toMp4) return window.toMp4;
+  if (!toMp4Loader) {
+    toMp4Loader = import('https://cdn.jsdelivr.net/npm/@invintusmedia/tomp4@1.7.4/src/index.min.js')
+      .then(mod => {
+        window.toMp4 = mod.default || mod.toMp4;
+        return window.toMp4;
       });
+  }
+  return toMp4Loader;
+}
 
-      transmuxer.on('done', function() {
-        let totalSize = (initSegment ? initSegment.byteLength : 0);
-        for (const chunk of mp4Chunks) {
-          totalSize += chunk.byteLength;
-        }
-        const fullMp4 = new Uint8Array(totalSize);
-        let offset = 0;
-        if (initSegment) {
-          fullMp4.set(initSegment, offset);
-          offset += initSegment.byteLength;
-        }
-        for (const chunk of mp4Chunks) {
-          fullMp4.set(chunk, offset);
-          offset += chunk.byteLength;
-        }
-        resolve(new Blob([fullMp4], { type: 'video/mp4' }));
-      });
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          transmuxer.push(new Uint8Array(e.target.result));
-          transmuxer.flush();
-        } catch (err) {
-          reject(err);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(tsBlob);
-    } catch (err) {
-      reject(err);
-    }
-  });
+async function transmuxTsToMp4(tsSegments) {
+  const converter = await loadToMp4();
+  if (!converter?.stitchTs) throw new Error('MP4 muxer failed to load. Refresh and try again.');
+  const validSegments = tsSegments.filter(bytes => bytes?.byteLength);
+  if (!validSegments.length) throw new Error('No video data to package');
+  const mp4 = converter.stitchTs(validSegments);
+  const mp4Data = mp4.data || mp4;
+  if (mp4Data?.[4] !== 0x66 || mp4Data?.[5] !== 0x74 || mp4Data?.[6] !== 0x79 || mp4Data?.[7] !== 0x70) {
+    throw new Error('MP4 muxer returned invalid output');
+  }
+  const blob = new Blob([mp4Data], { type: 'video/mp4' });
+  if (!blob.size) throw new Error('MP4 transmux produced no output');
+  return blob;
 }
 
 function go() {
@@ -537,32 +514,13 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
   const CC=10,segData=new Array(segs.length);let nxt=0,done=0;
   const fetchSeg=async si=>{let t=segs[si];if(!t.includes('/api/proxy'))t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);try{const r=await fetch(t,{signal});if(r.ok){const b=await r.arrayBuffer();segData[si]=new Uint8Array(b);Slots[idx].downloaded+=b.byteLength;}else segData[si]=new Uint8Array(0);}catch(e){if(e.name==='AbortError')throw e;segData[si]=new Uint8Array(0);}done++;Slots[idx].segDone=done;trackSpeed(idx);Slots[idx].status=`${done}/${segs.length} segments...`;updateSlotUI(idx);updateStats();};
   await new Promise((res,rej)=>{let act=0;const go=()=>{while(act<CC&&nxt<segs.length){if(signal.aborted){rej(new DOMException('Aborted','AbortError'));return;}const si=nxt++;act++;fetchSeg(si).then(()=>{act--;if(done>=segs.length)res();else go();}).catch(rej);}};go();});
-  Slots[idx].status='Combining...';updateSlotUI(idx);
+  Slots[idx].status='Muxing standard MP4...';updateSlotUI(idx);
   const total=segData.reduce((a,c)=>a+c.byteLength,0);
-  const tsBlob=new Blob(segData,{type:'video/mp2t'});
-  const isTs = filename.toLowerCase().endsWith('.ts');
-  log(`Slot ${idx+1}: ✅ ${fmtBytes(total)} (H.264+AAC)`,'ok');
-  if (isTs) {
-    // Transmux TS → actual MP4 using mux.js, then download + store
-    log(`Slot ${idx+1}: Remuxing to MP4...`,'dl');
-    try {
-      const mp4Blob = await transmuxTsToMp4(tsBlob);
-      const mp4Filename = filename.substring(0, filename.length - 3) + '.mp4';
-      toast(`Downloaded: ${mp4Filename}`);
-      if(AUTO_SAVE) triggerBrowserDownloadDirect(mp4Blob, mp4Filename);
-      Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:mp4Filename,size:mp4Blob.size,blob:mp4Blob});
-    } catch(e) {
-      log(`Slot ${idx+1}: Remux failed, using TS: ${e.message}`,'warn');
-      toast(`Downloaded: ${filename} (TS fallback)`);
-      if(AUTO_SAVE) triggerBrowserDownload(tsBlob,filename);
-      Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob:tsBlob});
-    }
-  } else {
-    toast(`Downloaded: ${filename}`);
-    if(AUTO_SAVE) triggerBrowserDownload(tsBlob,filename);
-    Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob:tsBlob});
-  }
-  DoneCount++;TotalBytes+=total;renderDone();updateStats();
+  const outFilename=toMp4Filename(filename);
+  const blob=await transmuxTsToMp4(segData);
+  log(`Slot ${idx+1}: OK ${fmtBytes(total)} TS -> ${fmtBytes(blob.size)} standard MP4 (H.264+AAC)`,'ok');toast(`Downloaded: ${outFilename}`);
+  if(AUTO_SAVE)triggerBrowserDownload(blob,outFilename);
+  Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:outFilename,size:blob.size,blob});DoneCount++;TotalBytes+=blob.size;renderDone();updateStats();
 }
 
 async function downloadDirect(idx,url,title,signal) {
@@ -571,7 +529,7 @@ async function downloadDirect(idx,url,title,signal) {
   const reader=resp.body.getReader();const chunks=[];
   while(true){if(signal.aborted)throw new DOMException('Aborted','AbortError');const{done,value}=await reader.read();if(done)break;chunks.push(value);Slots[idx].downloaded+=value.byteLength;trackSpeed(idx);if(Date.now()-(Slots[idx]._lu||0)>200){Slots[idx]._lu=Date.now();updateSlotUI(idx);updateStats();}}
   const blob=new Blob(chunks,{type:'video/mp4'});const fn=sanitizeFilename(title)+'.mp4';
-  log(`Slot ${idx+1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`,'ok');toast(`Downloaded: ${fn}`);if(AUTO_SAVE)triggerBrowserDownloadDirect(blob,fn);
+  log(`Slot ${idx+1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`,'ok');toast(`Downloaded: ${fn}`);if(AUTO_SAVE)triggerBrowserDownload(blob,fn);
   Done.unshift({title,filename:fn,size:Slots[idx].downloaded,blob});DoneCount++;TotalBytes+=Slots[idx].downloaded;renderDone();updateStats();
 }
 
@@ -583,7 +541,7 @@ async function testApi() {
 
 loadCfg();
 log('StreamVault v6 ready','ok');
-log('API: '+(API||'same-origin')+' | Output: .ts → .mp4 (actual container swap via mux.js)','api');
+log('API: '+(API||'same-origin')+' | Output: real .mp4 container (iOS friendly)','api');
 if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel','err');document.getElementById('setupBanner').classList.remove('hidden');}
 testApi();
 setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
