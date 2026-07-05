@@ -1,518 +1,510 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StreamVault - HLS Downloader</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --primary: #3b82f6;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --success: #10b981;
-      --error: #ef4444;
-      --warn: #f59e0b;
-    }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .container {
-      width: 100%;
-      max-width: 950px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .panel {
-      background: var(--surface);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    .header h2 { margin: 0; }
-    
-    /* Controls Area */
-    .controls-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-    .input-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    select {
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: white;
-      outline: none;
-      cursor: pointer;
-    }
-    input[type="text"] {
-      flex: 1;
-      min-width: 250px;
-      padding: 10px 15px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: white;
-      outline: none;
-    }
-    input[type="text"]:focus {
-      border-color: var(--primary);
-    }
-    button {
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      background: var(--primary);
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
-      white-space: nowrap;
-    }
-    button:hover { background: #2563eb; }
-    .btn-success { background: var(--success); }
-    .btn-success:hover { background: #059669; }
-    
-    /* Log Window */
-    .log-window {
-      background: #020617;
-      padding: 15px;
-      border-radius: 8px;
-      height: 200px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 13px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      border: 1px solid #334155;
-    }
-    .log-info { color: var(--text); }
-    .log-success { color: var(--success); }
-    .log-warn { color: var(--warn); }
-    .log-error { color: var(--error); }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreamVault v6</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#07070f;--card:rgba(13,13,25,.75);--border:rgba(255,255,255,.06);--glow:rgba(139,92,246,.15)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:#c8cfd8;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(99,102,241,.08),transparent 70%),
+             radial-gradient(ellipse 60% 40% at 80% 110%,rgba(168,85,247,.05),transparent 60%)}
 
-    /* Slots */
-    .slot {
-      background: #0f172a;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #334155;
-    }
-    .slot-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-    .progress-bar {
-      height: 8px;
-      background: #334155;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--primary);
-      width: 0%;
-      transition: width 0.2s;
-    }
-    .slot-stats {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-  </style>
+/* Cards */
+.card{background:var(--card);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:16px}
+.card-glow{box-shadow:0 0 0 1px rgba(139,92,246,.1),0 8px 40px -12px rgba(0,0,0,.5)}
+
+/* Gradient text */
+.grad{background:linear-gradient(135deg,#818cf8,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* Progress */
+.pbar{height:5px;border-radius:99px;background:rgba(255,255,255,.04);overflow:hidden;position:relative}
+.pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);transition:width .25s ease;position:relative}
+.pfill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,rgba(255,255,255,.2));animation:shimmer 2s ease-in-out infinite}
+@keyframes shimmer{0%,100%{opacity:0}50%{opacity:1}}
+
+/* Badges */
+.tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+.tag-sub{background:rgba(99,102,241,.12);color:#93a5fc;border:1px solid rgba(99,102,241,.2)}
+.tag-dub{background:rgba(249,115,22,.12);color:#fbbf6a;border:1px solid rgba(249,115,22,.2)}
+.tag-ok{background:rgba(52,211,153,.1);color:#6ee7b7;border:1px solid rgba(52,211,153,.2)}
+.tag-src{background:rgba(139,92,246,.1);color:#c4b5fd;border:1px solid rgba(139,92,246,.15)}
+
+/* Slot active state */
+.slot-active{border-color:rgba(139,92,246,.3)!important;box-shadow:0 0 30px -5px rgba(139,92,246,.12)}
+.dot-pulse{animation:dotpulse 2s ease-in-out infinite}
+@keyframes dotpulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
+
+/* Mono log */
+.mono{font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.6}
+#logBox{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,.2) transparent}
+#logBox::-webkit-scrollbar{width:3px}
+#logBox::-webkit-scrollbar-thumb{background:rgba(139,92,246,.25);border-radius:9px}
+
+/* Buttons */
+.btn{font-weight:600;border-radius:11px;border:none;cursor:pointer;transition:all .2s;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn-dl{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:11px 18px;box-shadow:0 4px 14px -4px rgba(99,102,241,.35)}
+.btn-dl:hover{box-shadow:0 6px 24px -4px rgba(99,102,241,.5);transform:translateY(-1px)}
+.btn-all{background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:11px 14px;box-shadow:0 4px 14px -4px rgba(16,185,129,.3)}
+.btn-all:hover{box-shadow:0 6px 24px -4px rgba(16,185,129,.45);transform:translateY(-1px)}
+.btn-s{background:rgba(255,255,255,.04);color:#8892a4;padding:5px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-s:hover{background:rgba(255,255,255,.08);color:#c8cfd8;border-color:rgba(255,255,255,.12)}
+
+/* Inputs */
+input[type="url"],input[type="text"],select{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px 16px;color:#dde2ea;font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:rgba(139,92,246,.4);box-shadow:0 0 0 3px rgba(139,92,246,.08)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);z-index:100;display:none;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.mbox{background:#0d0d1a;border:1px solid rgba(255,255,255,.08);border-radius:20px;max-width:480px;width:92%;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+
+/* Spinner */
+.spin{width:12px;height:12px;border:2px solid rgba(139,92,246,.2);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .25s ease-out}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;z-index:200;animation:fadeUp .25s ease-out}
+
+/* Section header */
+.sec-head{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#5a6170;display:flex;align-items:center;gap:6px}
+</style>
 </head>
 <body>
 
-<div class="container">
-  <div class="panel">
-    <div class="header">
-      <h2>StreamVault</h2>
+<!-- Background orbs (decorative) -->
+<div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-500/[.03] rounded-full blur-[120px] pointer-events-none"></div>
+<div class="fixed bottom-0 right-1/4 w-80 h-80 bg-violet-500/[.03] rounded-full blur-[100px] pointer-events-none"></div>
+
+<div class="relative z-10 max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+<!-- ====== Header ====== -->
+<header class="flex items-center justify-between">
+  <div class="flex items-center gap-3.5">
+    <div class="w-10 h-10 rounded-[13px] bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+      <svg class="w-[18px] h-[18px] text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+    </div>
+    <div>
+      <h1 class="text-[17px] font-bold grad tracking-tight">StreamVault</h1>
+      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6 — Anime Downloader</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <div id="apiSt" class="flex items-center gap-1.5 text-[10px] text-slate-500"><span class="spin"></span><span>Testing</span></div>
+    <button onclick="document.getElementById('cfgModal').classList.add('show')" class="btn-s">
+      <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+      Settings
+    </button>
+  </div>
+</header>
+
+<!-- file:// warning -->
+<div id="setupBanner" class="hidden card p-4 border-yellow-500/20 bg-yellow-500/[.04]">
+  <p class="text-xs text-yellow-300/80"><strong>📋 Setup needed:</strong> Add this as <code class="text-yellow-200/70 bg-yellow-500/10 px-1 rounded">public/streamvault.html</code> in your GitHub fork → commit → open <strong class="text-green-300" id="deployUrl">https://your-app.vercel.app/streamvault.html</strong></p>
+  <button onclick="this.parentElement.classList.add('hidden')" class="text-[10px] text-yellow-500/50 hover:text-yellow-300 mt-1">Dismiss</button>
+</div>
+
+<!-- ====== Stats Strip ====== -->
+<div class="card card-glow px-5 py-3.5 grid grid-cols-4 gap-4">
+  <div class="text-center"><div class="text-[22px] font-bold text-indigo-400 tabular-nums" id="sA">0<span class="text-slate-600 text-sm">/2</span></div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Slots</div></div>
+  <div class="text-center"><div class="text-[22px] font-bold text-cyan-400 tabular-nums" id="sS">—</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Speed</div></div>
+  <div class="text-center"><div class="text-[22px] font-bold text-emerald-400 tabular-nums" id="sD">0</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Done</div></div>
+  <div class="text-center"><div class="text-[22px] font-bold text-violet-400 tabular-nums" id="sB">0 B</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Total</div></div>
+</div>
+
+<!-- ====== URL Input ====== -->
+<div class="card card-glow p-4">
+  <div class="flex gap-2.5 items-center">
+    <div class="relative" style="flex:1 1 0;min-width:0">
+      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+      <input type="url" id="urlIn" placeholder="Paste Anikoto or HiAnime URL..." oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()" style="padding-left:40px;padding-right:90px">
+      <div id="urlBadge" class="absolute right-3 top-1/2 -translate-y-1/2 hidden"></div>
+    </div>
+    <select id="audSel" style="width:62px;flex:0 0 62px;padding:12px 6px;font-size:11px;text-align:center;font-weight:600"><option value="sub">SUB</option><option value="dub">DUB</option></select>
+    <button onclick="go()" class="btn btn-dl whitespace-nowrap">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+      Ep
+    </button>
+    <button onclick="goAll()" class="btn btn-all whitespace-nowrap">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      All
+    </button>
+  </div>
+  <div id="urlHint" class="text-[11px] mt-2 pl-1 hidden"></div>
+</div>
+
+<!-- ====== Download Slots ====== -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <!-- Slot 0 -->
+  <div class="card p-5 slot" id="sl0">
+    <div class="flex justify-between items-center mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-2.5 h-2.5 rounded-full bg-slate-700" id="d0"></div>
+        <span class="sec-head">Slot 1</span>
+      </div>
+      <button class="text-slate-700 hover:text-red-400 transition-colors hidden" id="x0" onclick="cancel(0)">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="e0" class="flex flex-col items-center justify-center py-6 text-slate-700">
+      <svg class="w-7 h-7 mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+      <span class="text-xs">Waiting for download</span>
+    </div>
+    <div id="a0" class="hidden space-y-2.5">
       <div>
-        <label><input type="checkbox" id="autoSave" checked> Auto-Save File</label>
+        <div class="text-[13px] font-semibold text-white/90 truncate" id="t0">—</div>
+        <div class="text-[11px] text-slate-500 mt-0.5" id="u0">—</div>
       </div>
-    </div>
-    <div class="controls-wrapper">
-      <div class="input-group">
-        <select id="audioOption">
-          <option value="sub">Sub</option>
-          <option value="dub">Dub</option>
-        </select>
-        <input type="text" id="urlInput" placeholder="Enter video URL (e.g., https://anikoto.cz/watch/.../ep-1)">
-        <button onclick="startSingle()">Download 1</button>
-        <button class="btn-success" onclick="startBatch()">Download All Episodes</button>
+      <div class="flex gap-1.5" id="bg0"></div>
+      <div class="pbar"><div class="pfill" id="p0" style="width:0%"></div></div>
+      <div class="grid grid-cols-4 gap-1 text-[10px] text-slate-500 tabular-nums">
+        <span id="pc0">0%</span>
+        <span id="sz0">—</span>
+        <span class="text-right" id="sp0">—</span>
+        <span class="text-right" id="et0">—</span>
       </div>
+      <div class="text-[10px] text-violet-400/60" id="st0">...</div>
     </div>
   </div>
-
-  <div class="panel">
-    <div class="header">
-      <h2>System Logs</h2>
+  <!-- Slot 1 -->
+  <div class="card p-5 slot" id="sl1">
+    <div class="flex justify-between items-center mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-2.5 h-2.5 rounded-full bg-slate-700" id="d1"></div>
+        <span class="sec-head">Slot 2</span>
+      </div>
+      <button class="text-slate-700 hover:text-red-400 transition-colors hidden" id="x1" onclick="cancel(1)">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
     </div>
-    <div class="log-window" id="logWindow"></div>
-  </div>
-
-  <div class="panel" id="slotsPanel" style="display: none;">
-    <div class="header">
-      <h2>Active Downloads</h2>
+    <div id="e1" class="flex flex-col items-center justify-center py-6 text-slate-700">
+      <svg class="w-7 h-7 mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+      <span class="text-xs">Waiting for download</span>
     </div>
-    <div id="slotsContainer"></div>
+    <div id="a1" class="hidden space-y-2.5">
+      <div>
+        <div class="text-[13px] font-semibold text-white/90 truncate" id="t1">—</div>
+        <div class="text-[11px] text-slate-500 mt-0.5" id="u1">—</div>
+      </div>
+      <div class="flex gap-1.5" id="bg1"></div>
+      <div class="pbar"><div class="pfill" id="p1" style="width:0%"></div></div>
+      <div class="grid grid-cols-4 gap-1 text-[10px] text-slate-500 tabular-nums">
+        <span id="pc1">0%</span>
+        <span id="sz1">—</span>
+        <span class="text-right" id="sp1">—</span>
+        <span class="text-right" id="et1">—</span>
+      </div>
+      <div class="text-[10px] text-violet-400/60" id="st1">...</div>
+    </div>
   </div>
 </div>
 
+<!-- ====== Queue & Completed ====== -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+  <div class="card p-4">
+    <div class="flex justify-between items-center mb-3">
+      <span class="sec-head">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+        Queue <span class="text-violet-400/50 ml-1" id="qCount">0</span>
+      </span>
+      <button onclick="Q=[];renderQ()" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
+    </div>
+    <div id="qEl" class="text-xs text-slate-600 text-center py-3 max-h-36 overflow-y-auto">Empty</div>
+  </div>
+  <div class="card p-4">
+    <div class="flex justify-between items-center mb-3">
+      <span class="sec-head">
+        <svg class="w-3.5 h-3.5 text-emerald-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Completed
+      </span>
+      <button onclick="Done=[];renderDone()" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
+    </div>
+    <div id="dEl" class="text-xs text-slate-600 text-center py-3 max-h-36 overflow-y-auto">Empty</div>
+  </div>
+</div>
+
+<!-- ====== Activity Log ====== -->
+<div class="card p-4">
+  <div class="flex justify-between items-center mb-3">
+    <span class="sec-head">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Activity Log
+    </span>
+    <button onclick="document.getElementById('logBox').innerHTML=''" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
+  </div>
+  <div id="logBox" class="mono text-slate-500"></div>
+</div>
+
+</div><!-- /container -->
+
+<!-- ====== Settings Modal ====== -->
+<div class="modal" id="cfgModal">
+<div class="mbox">
+  <div class="flex justify-between items-center mb-5">
+    <h2 class="text-base font-bold grad">Settings</h2>
+    <button onclick="document.getElementById('cfgModal').classList.remove('show')" class="text-slate-600 hover:text-white transition-colors">
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="space-y-5">
+    <div>
+      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">API Base URL</label>
+      <input type="text" id="cfgApi" placeholder="https://anikoto-api-ten.vercel.app">
+      <p class="text-[10px] text-slate-600 mt-1.5">Your Vercel-deployed Teramoto anikoto-API</p>
+    </div>
+    <div class="flex items-center justify-between p-3 rounded-xl bg-white/[.02] border border-white/[.04]">
+      <label class="text-sm text-slate-300">Auto-download when done</label>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="cfgAuto" checked class="sr-only peer">
+        <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-violet-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+      </label>
+    </div>
+    <button onclick="saveCfg()" class="btn btn-dl w-full justify-center">Save Changes</button>
+  </div>
+</div>
+</div>
+
 <script>
-  // ==========================================
-  // GLOBALS & CONFIG
-  // ==========================================
-  const API = "https://anikoto-api-ten.vercel.app"; 
-  let Slots = [];
-  let Done = [];
-  let TotalBytes = 0;
-  let DoneCount = 0;
+/* ================================================================
+   StreamVault v6 — Core Engine
+   Architecture: Single-page app hosted on user's Vercel deployment
+   API: Teramoto anikoto-API (same-origin, no CORS issues)
+   Output: .ts files (H.264+AAC MPEG-TS) — correct duration, plays everywhere
+   ================================================================ */
 
-  const UI = {
-    log: document.getElementById('logWindow'),
-    url: document.getElementById('urlInput'),
-    audioOpt: document.getElementById('audioOption'),
-    slots: document.getElementById('slotsContainer'),
-    slotsPanel: document.getElementById('slotsPanel'),
-    autoSave: document.getElementById('autoSave')
-  };
+const ORIGIN = window.location.origin;
+const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('localhost');
+let API = IS_DEPLOYED ? '' : 'https://anikoto-api-ten.vercel.app';
+let AUTO_SAVE = true;
+const Slots = [null, null];
+const AbortCtrl = [null, null];
+let Q = [];
+let Done = [];
+let TotalBytes = 0;
+let DoneCount = 0;
 
-  // ==========================================
-  // UTILITIES
-  // ==========================================
-  function log(msg, type = 'info') {
-    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-    const div = document.createElement('div');
-    div.className = `log-${type}`;
-    div.textContent = `[${time}] ${msg}`;
-    UI.log.appendChild(div);
-    UI.log.scrollTop = UI.log.scrollHeight;
-  }
+function loadCfg() {
+  try { const c = JSON.parse(localStorage.getItem('sv6') || '{}'); if (c.api !== undefined) API = c.api; if (c.auto !== undefined) AUTO_SAVE = c.auto; } catch(e) {}
+  document.getElementById('cfgApi').value = API || '(same origin)';
+  document.getElementById('cfgAuto').checked = AUTO_SAVE;
+  if (window.location.protocol === 'file:') { document.getElementById('setupBanner').classList.remove('hidden'); document.getElementById('deployUrl').textContent = (API || 'https://anikoto-api-ten.vercel.app') + '/streamvault.html'; }
+}
+function saveCfg() {
+  const v = document.getElementById('cfgApi').value.trim();
+  API = (v === '(same origin)' || !v) ? '' : v;
+  AUTO_SAVE = document.getElementById('cfgAuto').checked;
+  localStorage.setItem('sv6', JSON.stringify({ api: API, auto: AUTO_SAVE }));
+  document.getElementById('cfgModal').classList.remove('show');
+  toast('Settings saved'); testApi();
+}
 
-  function fmtBytes(bytes) {
-    if (bytes === 0) return '0 B';
-    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
+function fmtBytes(b) { if (!b || b <= 0) return '0 B'; const u = ['B','KB','MB','GB']; const i = Math.floor(Math.log(b) / Math.log(1024)); return (b / Math.pow(1024, i)).toFixed(i > 1 ? 2 : 0) + ' ' + u[i]; }
+function fmtETA(s) { if (!s || !isFinite(s) || s <= 0) return '—'; if (s < 60) return Math.round(s) + 's'; if (s < 3600) return Math.floor(s/60) + 'm ' + Math.round(s%60) + 's'; return Math.floor(s/3600) + 'h ' + Math.floor((s%3600)/60) + 'm'; }
+function sanitizeFilename(n) { return n.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_').substring(0, 80); }
 
-  function triggerBrowserDownload(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+function log(msg, type = 'info') {
+  const el = document.getElementById('logBox');
+  const colors = { info:'text-slate-500', ok:'text-emerald-400', err:'text-red-400', warn:'text-amber-400', api:'text-violet-400', dl:'text-cyan-400' };
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const div = document.createElement('div');
+  div.className = 'mono anim';
+  div.innerHTML = `<span class="text-slate-700">${ts}</span> <span class="${colors[type]||colors.info}">${msg}</span>`;
+  el.appendChild(div);
+  while (el.children.length > 200) el.removeChild(el.firstChild);
+  el.scrollTop = el.scrollHeight;
+}
+function toast(msg, success = true) {
+  document.querySelectorAll('.toast').forEach(e => e.remove());
+  const d = document.createElement('div'); d.className = 'toast';
+  d.innerHTML = `<div class="card ${success ? 'border-emerald-500/20' : 'border-red-500/20'} px-4 py-3 text-sm shadow-xl">${success ? '✓' : '✕'} ${msg}</div>`;
+  document.body.appendChild(d);
+  setTimeout(() => { if (d.parentNode) d.remove(); }, 3500);
+}
 
-  // ==========================================
-  // UI MANAGEMENT
-  // ==========================================
-  function createSlotUI(idx, url) {
-    UI.slotsPanel.style.display = 'block';
-    const div = document.createElement('div');
-    div.className = 'slot';
-    div.id = `slot-${idx}`;
-    div.innerHTML = `
-      <div class="slot-header">
-        <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;" title="${url}">${url}</strong>
-        <span id="status-${idx}">Initializing...</span>
-      </div>
-      <div class="progress-bar"><div class="progress-fill" id="fill-${idx}"></div></div>
-      <div class="slot-stats">
-        <span id="progress-text-${idx}">0 / 0 chunks</span>
-        <span id="size-${idx}">0 MB</span>
-      </div>
-    `;
-    // Insert at top so newest is visible
-    UI.slots.insertBefore(div, UI.slots.firstChild);
-  }
+function parseUrl(url) {
+  let m = url.match(/(?:anikoto|anikototv)\.\w+\/watch\/([a-z0-9][a-z0-9-]*[a-z0-9])(?:\/ep-(\d+))?/i);
+  if (m) return { slug: m[1], ep: m[2] ? +m[2] : 1, platform: 'anikoto' };
+  m = url.match(/hianime[s]?\.\w+\/watch\/([a-z0-9][a-z0-9-]*[a-z0-9])/i);
+  if (m) { const e = url.match(/[?&]ep=(\d+)/); return { slug: m[1], ep: e ? +e[1] : 1, platform: 'hianime' }; }
+  return null;
+}
+function detectUrl() {
+  const url = document.getElementById('urlIn').value.trim();
+  const badge = document.getElementById('urlBadge'), hint = document.getElementById('urlHint');
+  if (!url) { badge.classList.add('hidden'); hint.classList.add('hidden'); return; }
+  const p = parseUrl(url);
+  if (p) { badge.innerHTML = `<span class="tag tag-ok">${p.platform}</span>`; hint.innerHTML = `<span class="text-emerald-400/80">✓ Episode ${p.ep} detected</span>`; }
+  else { badge.innerHTML = '<span class="tag tag-ok">URL</span>'; hint.innerHTML = '<span class="text-slate-500">Direct URL</span>'; }
+  badge.classList.remove('hidden'); hint.classList.remove('hidden');
+}
 
-  function updateSlotUI(idx) {
-    const slot = Slots[idx];
-    if (!slot) return;
-    
-    document.getElementById(`status-${idx}`).textContent = slot.status;
-    document.getElementById(`size-${idx}`).textContent = fmtBytes(slot.downloaded);
-    
-    if (slot.segTotal > 0) {
-      const pct = (slot.segDone / slot.segTotal) * 100;
-      document.getElementById(`fill-${idx}`).style.width = `${pct}%`;
-      document.getElementById(`progress-text-${idx}`).textContent = `${slot.segDone} / ${slot.segTotal} chunks`;
-    }
-  }
+function updateStats() {
+  const active = Slots.filter(Boolean).length;
+  document.getElementById('sA').innerHTML = active + '<span class="text-slate-600 text-sm">/2</span>';
+  document.getElementById('sD').textContent = DoneCount;
+  document.getElementById('sB').textContent = fmtBytes(TotalBytes);
+  let spd = 0; Slots.forEach(s => { if (s) spd += (s.speed || 0); });
+  document.getElementById('sS').textContent = spd > 0 ? fmtBytes(spd) + '/s' : '—';
+}
+function updateSlotUI(idx) {
+  const s = Slots[idx], $ = id => document.getElementById(id);
+  if (!s) { $('e'+idx).classList.remove('hidden'); $('a'+idx).classList.add('hidden'); $('x'+idx).classList.add('hidden'); $('d'+idx).className='w-2.5 h-2.5 rounded-full bg-slate-700'; $('sl'+idx).classList.remove('slot-active'); return; }
+  $('e'+idx).classList.add('hidden'); $('a'+idx).classList.remove('hidden'); $('x'+idx).classList.remove('hidden');
+  $('d'+idx).className='w-2.5 h-2.5 rounded-full bg-emerald-400 dot-pulse'; $('sl'+idx).classList.add('slot-active');
+  $('t'+idx).textContent = s.title || '—'; $('u'+idx).textContent = s.subtitle || '';
+  let badges = '';
+  if (s.audioType) badges += `<span class="tag tag-${s.audioType}">${s.audioType}</span>`;
+  if (s.serverName) badges += `<span class="tag tag-src">${s.serverName}</span>`;
+  $('bg'+idx).innerHTML = badges;
+  const pct = s.segTotal ? (s.segDone/s.segTotal*100) : (s.totalSize ? s.downloaded/s.totalSize*100 : 0);
+  $('p'+idx).style.width = Math.min(pct,100)+'%'; $('pc'+idx).textContent = Math.round(pct)+'%';
+  $('sz'+idx).textContent = s.segTotal ? `${s.segDone}/${s.segTotal}` : fmtBytes(s.downloaded);
+  $('sp'+idx).textContent = s.speed > 0 ? fmtBytes(s.speed)+'/s' : '—';
+  let eta = '—'; if (s.speed>0 && s.segTotal && s.segDone>0) eta = fmtETA((s.elapsed/s.segDone)*(s.segTotal-s.segDone));
+  $('et'+idx).textContent = eta; $('st'+idx).textContent = s.status || '';
+}
 
-  // ==========================================
-  // ORCHESTRATION (SINGLE & BATCH)
-  // ==========================================
-  async function startSingle() {
-    let url = UI.url.value.trim();
-    if (!url) return alert('Please enter a URL');
-    UI.url.value = ''; // Clear after starting
-    
-    const audioPref = UI.audioOpt.value;
-    await executeDownload(url, audioPref);
-  }
+function renderQ() {
+  const el = document.getElementById('qEl'); document.getElementById('qCount').textContent = Q.length;
+  if (!Q.length) { el.innerHTML = '<span class="text-slate-700">No items queued</span>'; return; }
+  el.innerHTML = Q.map((q,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-slate-400">${q.title}</span><button onclick="Q.splice(${i},1);renderQ();updateStats()" class="text-slate-700 hover:text-red-400 ml-2 shrink-0 transition-colors"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>`).join('');
+}
+function renderDone() {
+  const el = document.getElementById('dEl');
+  if (!Done.length) { el.innerHTML = '<span class="text-slate-700">No completed downloads</span>'; return; }
+  el.innerHTML = Done.map((d,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80"><svg class="w-3 h-3 inline mr-1 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob?`<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>`:''}</div>`).join('');
+}
+function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
+function triggerBrowserDownload(blob, filename) {
+  const file = new File([blob], filename, { type: 'video/mp2t', lastModified: Date.now() });
+  const url = URL.createObjectURL(file); const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 180000);
+}
 
-  async function startBatch() {
-    const baseUrlInput = UI.url.value.trim();
-    if (!baseUrlInput) return alert('Please enter a starting URL (e.g. ends in /ep-1)');
-    
-    // Parse URL to find the episode number format (e.g. /ep-1, -ep1, /episode-1)
-    const match = baseUrlInput.match(/(.*\/ep-)(\d+)(.*)/i);
-    
-    if (!match) {
-       log("Could not detect 'ep-X' pattern in URL. Falling back to single download.", 'warn');
-       return startSingle();
-    }
+function go() {
+  const url = document.getElementById('urlIn').value.trim();
+  if (!url) { toast('Enter a URL', false); return; }
+  const parsed = parseUrl(url), audio = document.getElementById('audSel').value;
+  let item;
+  if (parsed) { log(`Parsed: slug="${parsed.slug}" ep=${parsed.ep}`, 'api'); const t = parsed.slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' '); item = { url, slug:parsed.slug, ep:parsed.ep, platform:parsed.platform, audio, title:t+' Ep'+parsed.ep }; }
+  else { item = { url, audio, title:url.split('/').pop()?.substring(0,30)||'Download', platform:'direct' }; }
+  const free = Slots.findIndex(s=>s===null);
+  if (free!==-1) startSlot(free,item); else { Q.push(item); renderQ(); log('Queued: '+item.title); }
+  document.getElementById('urlIn').value=''; document.getElementById('urlBadge').classList.add('hidden'); document.getElementById('urlHint').classList.add('hidden'); updateStats();
+}
 
-    const prefix = match[1]; 
-    let currentEp = parseInt(match[2], 10);
-    const suffix = match[3]; 
-    
-    const audioPref = UI.audioOpt.value;
-    log(`Starting batch download from episode ${currentEp} (${audioPref.toUpperCase()})...`, 'info');
-    UI.url.value = ''; 
+async function goAll() {
+  const url=document.getElementById('urlIn').value.trim(); if(!url){toast('Enter a URL',false);return;}
+  const parsed=parseUrl(url); if(!parsed){toast('Not an anime URL',false);return;}
+  const audio=document.getElementById('audSel').value;
+  let slug=parsed.slug, title=slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' ');
+  log('Fetching episode list...','api'); toast('Loading episodes...');
+  try {
+    if(parsed.platform==='hianime'){slug=await resolveHiAnimeSlug(slug);title=slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' ');}
+    const r=await fetch(`${API}/api/anime/${slug}`); if(!r.ok)throw new Error('API: '+r.status);
+    const d=await r.json(); let count=0;
+    if(d.ok&&d.data){title=d.data.title||d.data.name||title;count=d.data.episodes?.[audio]||d.data.episodes?.sub||d.data.totalEpisodes||0;}
+    if(!count){const er=await fetch(`${API}/api/anime/${slug}/episodes`);if(er.ok){const ed=await er.json();if(ed.ok&&ed.data){const eps=ed.data.episodes||ed.data;if(Array.isArray(eps))count=eps.length;}}}
+    if(!count)throw new Error('No episodes found');
+    log(`Found ${count} episodes for "${title}"`,'ok');
+    if(!confirm(`Download all ${count} episodes of "${title}" (${audio.toUpperCase()})?`)){log('Cancelled','warn');return;}
+    for(let e=1;e<=count;e++){const item={url,slug,ep:e,platform:'anikoto',audio,title:`${title} Ep${e}`};const free=Slots.findIndex(s=>s===null);if(free!==-1&&e<=2)startSlot(free,item);else Q.push(item);}
+    renderQ();updateStats();toast(`Queued ${count} episodes!`);log(`Queued ${count} episodes`,'ok');
+  } catch(e){log('Error: '+e.message,'err');toast(e.message,false);}
+  document.getElementById('urlIn').value='';document.getElementById('urlBadge').classList.add('hidden');document.getElementById('urlHint').classList.add('hidden');
+}
 
-    let keepGoing = true;
-    while (keepGoing) {
-       const targetUrl = `${prefix}${currentEp}${suffix}`;
-       log(`Queueing: ${targetUrl}`, 'info');
-       
-       const success = await executeDownload(targetUrl, audioPref);
-       
-       if (!success) {
-          log(`Batch ended. (Reached last episode or hit a hard backend error).`, 'warn');
-          keepGoing = false;
-       } else {
-          currentEp++;
-       }
-    }
-  }
+async function startSlot(idx,item) {
+  const ac=new AbortController();AbortCtrl[idx]=ac;
+  Slots[idx]={...item,downloaded:0,totalSize:0,speed:0,elapsed:0,segDone:0,segTotal:0,status:'Starting...',startTime:Date.now(),lastSpeedCheck:Date.now(),lastBytes:0,subtitle:'',audioType:item.audio,serverName:''};
+  updateSlotUI(idx);updateStats();
+  try{if(item.platform==='anikoto'||item.platform==='hianime')await downloadAnime(idx,item,ac.signal);else await downloadDirect(idx,item.url,item.title,ac.signal);}
+  catch(e){if(e.name==='AbortError')log(`Slot ${idx+1}: Cancelled`,'warn');else{log(`Slot ${idx+1}: ${e.message}`,'err');toast(e.message,false);}}
+  Slots[idx]=null;AbortCtrl[idx]=null;updateSlotUI(idx);updateStats();
+  if(Q.length>0){const next=Q.shift();renderQ();startSlot(idx,next);}
+}
+function cancel(idx){if(AbortCtrl[idx])AbortCtrl[idx].abort();}
+function trackSpeed(idx){const s=Slots[idx];if(!s)return;const now=Date.now(),dt=(now-s.lastSpeedCheck)/1000;if(dt>=.5){s.speed=(s.downloaded-s.lastBytes)/dt;s.lastBytes=s.downloaded;s.lastSpeedCheck=now;s.elapsed=(now-s.startTime)/1000;}}
 
-  // ==========================================
-  // CORE EXTRACTION LOGIC (WITH AUTO-DISCOVERY)
-  // ==========================================
-  async function executeDownload(url, audioPref) {
-    const idx = Slots.length;
-    const controller = new AbortController();
-    Slots.push({
-      url,
-      status: 'Extracting data...',
-      downloaded: 0,
-      segDone: 0,
-      segTotal: 0,
-      controller
-    });
+async function resolveHiAnimeSlug(hiSlug) {
+  const t=hiSlug.replace(/-[a-z0-9]{5,}$/i,'').replace(/-episode-\d+/i,'').replace(/-/g,' ');
+  const r=await fetch(`${API}/api/search?keyword=${encodeURIComponent(t)}`);if(!r.ok)throw new Error('Search: '+r.status);
+  const d=await r.json();if(!d.ok||!d.data?.results?.length)throw new Error(`"${t}" not found`);return d.data.results[0].slug;
+}
 
-    createSlotUI(idx, url);
-    log(`Slot ${idx + 1}: Starting extraction for ${url}`);
+async function downloadAnime(idx,item,signal) {
+  let slug=item.slug;const ep=item.ep||1,audio=item.audio||'sub';
+  if(item.platform==='hianime'){Slots[idx].status='Searching...';updateSlotUI(idx);log(`Slot ${idx+1}: Searching...`,'api');slug=await resolveHiAnimeSlug(slug);const sr=await fetch(`${API}/api/search?keyword=${encodeURIComponent(slug.replace(/-/g,' ').substring(0,20))}`);if(sr.ok){const sd=await sr.json();if(sd.ok&&sd.data?.results?.[0])Slots[idx].title=sd.data.results[0].title;}log(`Slot ${idx+1}: → ${Slots[idx].title||slug}`,'ok');}
+  Slots[idx].status='Getting sources...';updateSlotUI(idx);log(`Slot ${idx+1}: /api/watch/${slug}?ep=${ep}`,'api');
+  const resp=await fetch(`${API}/api/watch/${slug}?ep=${ep}`,{signal});if(!resp.ok)throw new Error('Watch: '+resp.status);
+  const text=await resp.text();const sources=[];let epInfo=null;
+  try{const j=JSON.parse(text);if(j.ok&&j.data){if(j.data.sources)sources.push(...j.data.sources);if(j.data.episode)epInfo=j.data.episode;}}
+  catch{for(const line of text.split('\n')){if(!line.startsWith('data: '))continue;try{const o=JSON.parse(line.substring(6));if(o.type==='source'&&o.source)sources.push(o.source);if(o.type==='episode'&&o.episode)epInfo=o.episode;}catch{}}}
+  if(!sources.length)throw new Error('No sources');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
+  const avail=sources.filter(s=>s.m3u8).map(s=>`${s.server}(${s.type})`).join(', ');log(`Slot ${idx+1}: ${sources.length} sources: ${avail}`,'ok');
+  let cands=sources.filter(s=>s.type===audio&&s.m3u8);if(!cands.length){log(`Slot ${idx+1}: No "${audio}", using any`,'warn');cands=sources.filter(s=>s.m3u8);}if(!cands.length)throw new Error('No m3u8 sources');
+  const pref=cands.find(s=>/^HD/i.test(s.server))||cands.find(s=>/Vidstream/i.test(s.server))||cands[0];
+  Slots[idx].audioType=pref.type;Slots[idx].serverName=pref.server;updateSlotUI(idx);log(`Slot ${idx+1}: ${pref.server} (${pref.type})`,'ok');
+  const fn=sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${pref.type}`)+'.ts';
+  const tryOrder=[pref,...cands.filter(s=>s!==pref)];let lastErr=null;
+  for(const src of tryOrder){const m=src.proxyUrl?(API+src.proxyUrl):src.m3u8;const ref=src.referer||'https://megaplay.buzz/';Slots[idx].serverName=src.server;updateSlotUI(idx);log(`Slot ${idx+1}: Trying ${src.server}...`,'dl');try{await downloadHLS(idx,m,src.m3u8,ref,fn,signal);return;}catch(e){if(e.name==='AbortError')throw e;lastErr=e;log(`Slot ${idx+1}: ${src.server}: ${e.message}`,'warn');}}
+  throw lastErr||new Error('All sources failed');
+}
 
-    try {
-      // API Auto-Discovery Routes
-      const encUrl = encodeURIComponent(url);
-      const testRoutes = [
-        `${API}/api/extract?url=${encUrl}&type=${audioPref}`, // Primary
-        `${API}/extract?url=${encUrl}&type=${audioPref}`,     // Alt path
-        `${API}/api/scrape?url=${encUrl}&type=${audioPref}`,  // Alt path 2
-        `${API}/api/extract?url=${encUrl}`                    // Fallback (no type param)
-      ];
+async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
+  Slots[idx].status='Fetching playlist...';updateSlotUI(idx);
+  let fetchUrl=m3u8Url;if(!m3u8Url.includes('/api/proxy'))fetchUrl=API+'/api/proxy?url='+encodeURIComponent(m3u8Url)+'&referer='+encodeURIComponent(referer);else if(m3u8Url.startsWith('/'))fetchUrl=API+m3u8Url;
+  const resp=await fetch(fetchUrl,{signal});if(!resp.ok)throw new Error('M3U8: '+resp.status);
+  const txt=await resp.text();const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+  const resolveUrl=u=>{if(u.startsWith('/api/proxy'))return API+u;if(u.startsWith('http'))return u;const b=(originalUrl||m3u8Url).replace(/[^/]*$/,'');return b+u;};
+  if(lines.some(l=>l.includes('#EXT-X-STREAM-INF'))){let best=null,bestR=0;for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')){const rm=lines[j].match(/RESOLUTION=\d+x(\d+)/);const r=rm?+rm[1]:0;if(lines[j+1]&&!lines[j+1].startsWith('#')&&r>=bestR){bestR=r;best=lines[j+1];}}}if(!best){for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=lines[j+1];break;}}}if(!best)throw new Error('No variants');log(`Slot ${idx+1}: ${bestR}p`,'dl');const rv=resolveUrl(best);if(rv.includes('/api/proxy'))return downloadHLS(idx,rv,originalUrl,referer,filename,signal);return downloadHLS(idx,API+'/api/proxy?url='+encodeURIComponent(rv)+'&referer='+encodeURIComponent(referer),rv,referer,filename,signal);}
+  const segs=lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);if(!segs.length)throw new Error('No segments');
+  log(`Slot ${idx+1}: ${segs.length} segments`,'dl');Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
+  const CC=10,segData=new Array(segs.length);let nxt=0,done=0;
+  const fetchSeg=async si=>{let t=segs[si];if(!t.includes('/api/proxy'))t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);try{const r=await fetch(t,{signal});if(r.ok){const b=await r.arrayBuffer();segData[si]=new Uint8Array(b);Slots[idx].downloaded+=b.byteLength;}else segData[si]=new Uint8Array(0);}catch(e){if(e.name==='AbortError')throw e;segData[si]=new Uint8Array(0);}done++;Slots[idx].segDone=done;trackSpeed(idx);Slots[idx].status=`${done}/${segs.length} segments...`;updateSlotUI(idx);updateStats();};
+  await new Promise((res,rej)=>{let act=0;const go=()=>{while(act<CC&&nxt<segs.length){if(signal.aborted){rej(new DOMException('Aborted','AbortError'));return;}const si=nxt++;act++;fetchSeg(si).then(()=>{act--;if(done>=segs.length)res();else go();}).catch(rej);}};go();});
+  Slots[idx].status='Combining...';updateSlotUI(idx);
+  const total=segData.reduce((a,c)=>a+c.byteLength,0);
+  const blob=new Blob(segData,{type:'video/mp2t'});
+  log(`Slot ${idx+1}: ✅ ${fmtBytes(total)} (H.264+AAC)`,'ok');toast(`Downloaded: ${filename}`);
+  if(AUTO_SAVE)triggerBrowserDownload(blob,filename);
+  Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob});DoneCount++;TotalBytes+=total;renderDone();updateStats();
+}
 
-      let res = null;
-      let data = null;
+async function downloadDirect(idx,url,title,signal) {
+  Slots[idx].status='Connecting...';updateSlotUI(idx);const resp=await fetch(url,{signal});if(!resp.ok)throw new Error('HTTP '+resp.status);
+  Slots[idx].totalSize=parseInt(resp.headers.get('content-length')||'0');Slots[idx].status='Downloading...';updateSlotUI(idx);
+  const reader=resp.body.getReader();const chunks=[];
+  while(true){if(signal.aborted)throw new DOMException('Aborted','AbortError');const{done,value}=await reader.read();if(done)break;chunks.push(value);Slots[idx].downloaded+=value.byteLength;trackSpeed(idx);if(Date.now()-(Slots[idx]._lu||0)>200){Slots[idx]._lu=Date.now();updateSlotUI(idx);updateStats();}}
+  const blob=new Blob(chunks,{type:'video/mp4'});const fn=sanitizeFilename(title)+'.mp4';
+  log(`Slot ${idx+1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`,'ok');toast(`Downloaded: ${fn}`);if(AUTO_SAVE)triggerBrowserDownload(blob,fn);
+  Done.unshift({title,filename:fn,size:Slots[idx].downloaded,blob});DoneCount++;TotalBytes+=Slots[idx].downloaded;renderDone();updateStats();
+}
 
-      for (let route of testRoutes) {
-        try {
-          let tempRes = await fetch(route, { signal: controller.signal });
-          if (tempRes.ok) {
-            res = tempRes;
-            data = await res.json();
-            log(`Slot ${idx + 1}: Successfully connected to backend via ${route.split('?')[0]}`, 'success');
-            break;
-          }
-        } catch (e) {
-          // Ignore network errors and continue testing routes
-        }
-      }
+async function testApi() {
+  const el=document.getElementById('apiSt');el.innerHTML='<span class="spin"></span><span class="text-slate-600 ml-1.5">Checking</span>';
+  try{const r=await fetch(API+'/api/home');if(r.ok){el.innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-400 ml-1.5">Connected</span>';log('✓ API connected','ok');}else el.innerHTML='<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-400 ml-1.5">'+r.status+'</span>';}
+  catch(e){el.innerHTML='<span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-red-400/70 ml-1.5">Offline</span>';log('API: '+e.message,'err');if(window.location.protocol==='file:'){document.getElementById('setupBanner').classList.remove('hidden');log('Host on Vercel','warn');}}
+}
 
-      if (!res || !res.ok || !data) {
-        throw new Error(`HTTP 404: The Vercel backend failed to scrape this URL. The API route might be wrong, or Anikoto is blocking your Vercel server.`);
-      }
-
-      const m3u8Url = data.m3u8 || data.url || (data.sources && data.sources[0]?.file);
-      if (!m3u8Url) throw new Error("Backend responded, but could not find an m3u8 stream link in the response.");
-
-      const referer = data.referer || data.headers?.Referer || "";
-      
-      let titleFallback = url.split('/').pop() || `video_${Date.now()}`;
-      let filename = data.title ? data.title.replace(/[^a-z0-9]/gi, '_') : titleFallback;
-      filename = `${filename}_${audioPref.toUpperCase()}`; 
-      if (!filename.endsWith('.ts')) filename += '.ts';
-
-      log(`Slot ${idx + 1}: Found playlist, beginning download...`, 'success');
-      
-      await downloadHLS(idx, m3u8Url, referer, filename, controller.signal);
-      return true; 
-
-    } catch (err) {
-      if (err.name === 'AbortError') return false;
-      Slots[idx].status = `Failed: ${err.message}`;
-      document.getElementById(`status-${idx}`).style.color = 'var(--error)';
-      updateSlotUI(idx);
-      log(`Slot ${idx + 1}: ${err.message}`, 'error');
-      return false; 
-    }
-  }
-
-  // ==========================================
-  // HLS DOWNLOADER & PROXY FALLBACKS
-  // ==========================================
-  async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
-    Slots[idx].status = 'Fetching playlist...';
-    updateSlotUI(idx);
-
-    let fetchUrl = m3u8Url.includes('/api/proxy') ? m3u8Url : 
-      `${API}/api/proxy?url=${encodeURIComponent(m3u8Url)}&referer=${encodeURIComponent(referer || '')}`;
-
-    let resp;
-    try {
-      resp = await fetch(fetchUrl, { signal });
-      if (!resp.ok) throw new Error(`Proxy HTTP ${resp.status}`);
-    } catch (proxyErr) {
-      if (signal.aborted) throw proxyErr;
-      log(`Slot ${idx + 1}: Proxy blocked, trying direct connection...`, 'warn');
-      
-      resp = await fetch(m3u8Url, { signal });
-      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. Host requires a working proxy.`);
-    }
-
-    const m3u8Text = await resp.text();
-    const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
-    const resolveUrl = u => u.startsWith('http') ? u : m3u8Url.replace(/[^/]*$/, '') + u;
-
-    // Handle Master Playlists (Select best resolution)
-    if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
-      let bestUrl = null;
-      for (let j = 0; j < lines.length; j++) {
-        if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j+1]) {
-          bestUrl = lines[j+1]; 
-          break; 
-        }
-      }
-      return downloadHLS(idx, resolveUrl(bestUrl), referer, filename, signal);
-    }
-
-    const segmentUrls = lines.filter(l => l && !l.startsWith('#')).map(resolveUrl);
-    if (!segmentUrls.length) throw new Error('No video chunks found in playlist.');
-
-    Slots[idx].segTotal = segmentUrls.length;
-    Slots[idx].segDone = 0;
-    updateSlotUI(idx);
-
-    const CONCURRENCY = 10;
-    const segmentData = new Array(segmentUrls.length);
-    let nextSegIdx = 0;
-    let completedSegs = 0;
-
-    const fetchSegment = async () => {
-      while (nextSegIdx < segmentUrls.length) {
-        if (signal.aborted) throw new Error('AbortError');
-        const currentIdx = nextSegIdx++;
-        
-        let target = segmentUrls[currentIdx];
-        if (!target.includes('/api/proxy') && API !== '') {
-           target = `${API}/api/proxy?url=${encodeURIComponent(target)}&referer=${encodeURIComponent(referer || '')}`;
-        }
-        
-        try {
-          let r = await fetch(target, { signal });
-          if (!r.ok) {
-             r = await fetch(segmentUrls[currentIdx], { signal });
-             if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          }
-
-          const buf = await r.arrayBuffer();
-          segmentData[currentIdx] = new Uint8Array(buf);
-          completedSegs++;
-          Slots[idx].segDone = completedSegs;
-          Slots[idx].downloaded += buf.byteLength;
-          TotalBytes += buf.byteLength;
-          
-          updateSlotUI(idx);
-        } catch (err) {
-          log(`Slot ${idx + 1}: Chunk ${currentIdx} failed.`, 'error');
-          throw err;
-        }
-      }
-    };
-
-    Slots[idx].status = 'Downloading segments...';
-    updateSlotUI(idx);
-
-    const workers = Array(Math.min(CONCURRENCY, segmentUrls.length)).fill(null).map(fetchSegment);
-    await Promise.all(workers);
-
-    if (signal.aborted) return;
-
-    Slots[idx].status = 'Compiling file...';
-    updateSlotUI(idx);
-
-    const totalLength = segmentData.reduce((acc, val) => acc + (val ? val.length : 0), 0);
-    const merged = new Uint8Array(totalLength);
-    let offset = 0;
-    for (let arr of segmentData) {
-      if (arr) {
-        merged.set(arr, offset);
-        offset += arr.length;
-      }
-    }
-
-    const blob = new Blob([merged], { type: 'video/mp2t' });
-    
-    DoneCount++;
-    Done.push({ title: filename, size: merged.length, blob, filename });
-    
-    Slots[idx].status = 'Finished';
-    document.getElementById(`status-${idx}`).style.color = 'var(--success)';
-    updateSlotUI(idx);
-    
-    if (UI.autoSave.checked) {
-      triggerBrowserDownload(blob, filename);
-    }
-    
-    log(`Slot ${idx + 1}: Completed ${filename} (${fmtBytes(merged.length)})`, 'success');
-  }
+loadCfg();
+log('StreamVault v6 ready','ok');
+log('API: '+(API||'same-origin')+' | Output: .ts (H.264+AAC)','api');
+if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel','err');document.getElementById('setupBanner').classList.remove('hidden');}
+testApi();
+setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('cfgModal').classList.remove('show');});
 </script>
-
 </body>
 </html>
