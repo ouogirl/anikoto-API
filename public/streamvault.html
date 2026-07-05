@@ -279,7 +279,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    StreamVault v6 — Core Engine
    Architecture: Single-page app hosted on user's Vercel deployment
    API: Teramoto anikoto-API (same-origin, no CORS issues)
-   Output: .ts files (H.264+AAC MPEG-TS) — correct duration, plays everywhere
+   Output: .ts files (H.264+AAC MPEG-TS) — swapped to .mp4 for iOS Gallery compatibility
    ================================================================ */
 
 const ORIGIN = window.location.origin;
@@ -385,10 +385,25 @@ function renderDone() {
   el.innerHTML = Done.map((d,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80"><svg class="w-3 h-3 inline mr-1 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob?`<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>`:''}</div>`).join('');
 }
 function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
+
 function triggerBrowserDownload(blob, filename) {
-  const file = new File([blob], filename, { type: 'video/mp2t', lastModified: Date.now() });
-  const url = URL.createObjectURL(file); const a = document.createElement('a');
-  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  // If the file extension is .ts, we perform a 'container swap' so the iOS Photo Gallery treats it as an MP4.
+  let targetFilename = filename;
+  let targetMimeType = 'video/mp2t';
+  
+  if (filename.toLowerCase().endsWith('.ts')) {
+    targetFilename = filename.substring(0, filename.length - 3) + '.mp4';
+    targetMimeType = 'video/mp4';
+  }
+
+  const file = new File([blob], targetFilename, { type: targetMimeType, lastModified: Date.now() });
+  const url = URL.createObjectURL(file);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = targetFilename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 180000);
 }
 
@@ -500,7 +515,7 @@ async function testApi() {
 
 loadCfg();
 log('StreamVault v6 ready','ok');
-log('API: '+(API||'same-origin')+' | Output: .ts (H.264+AAC)','api');
+log('API: '+(API||'same-origin')+' | Output: .ts swapped to .mp4 (iOS Friendly)','api');
 if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel','err');document.getElementById('setupBanner').classList.remove('hidden');}
 testApi();
 setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
