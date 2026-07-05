@@ -99,7 +99,7 @@
       background: #020617;
       padding: 15px;
       border-radius: 8px;
-      height: 180px;
+      height: 200px;
       overflow-y: auto;
       font-family: monospace;
       font-size: 13px;
@@ -276,7 +276,7 @@
   // ORCHESTRATION (SINGLE & BATCH)
   // ==========================================
   async function startSingle() {
-    const url = UI.url.value.trim();
+    let url = UI.url.value.trim();
     if (!url) return alert('Please enter a URL');
     UI.url.value = ''; // Clear after starting
     
@@ -296,24 +296,23 @@
        return startSingle();
     }
 
-    const prefix = match[1]; // Everything before the number (e.g., .../watch/.../ep-)
+    const prefix = match[1]; 
     let currentEp = parseInt(match[2], 10);
-    const suffix = match[3]; // Everything after the number (usually empty)
+    const suffix = match[3]; 
     
     const audioPref = UI.audioOpt.value;
     log(`Starting batch download from episode ${currentEp} (${audioPref.toUpperCase()})...`, 'info');
-    UI.url.value = ''; // Clear input
+    UI.url.value = ''; 
 
     let keepGoing = true;
     while (keepGoing) {
        const targetUrl = `${prefix}${currentEp}${suffix}`;
        log(`Queueing: ${targetUrl}`, 'info');
        
-       // Wait for the download to finish before starting the next one
        const success = await executeDownload(targetUrl, audioPref);
        
        if (!success) {
-          log(`Batch download ended. (Reached last episode or encountered a hard error).`, 'warn');
+          log(`Batch ended. (Reached last episode or hit a hard backend error).`, 'warn');
           keepGoing = false;
        } else {
           currentEp++;
@@ -322,7 +321,7 @@
   }
 
   // ==========================================
-  // CORE EXTRACTION LOGIC
+  // CORE EXTRACTION LOGIC (WITH AUTO-DISCOVERY)
   // ==========================================
   async function executeDownload(url, audioPref) {
     const idx = Slots.length;
@@ -340,35 +339,50 @@
     log(`Slot ${idx + 1}: Starting extraction for ${url}`);
 
     try {
-      // 1. EXTRACT DATA FROM API (appending audio preference)
-      const extractUrl = `${API}/api/extract?url=${encodeURIComponent(url)}&type=${audioPref}`;
-      const res = await fetch(extractUrl, { signal: controller.signal });
-      
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error(`HTTP 404: Episode/Data not found. Either the API route is missing, or this episode does not exist.`);
+      // API Auto-Discovery Routes
+      const encUrl = encodeURIComponent(url);
+      const testRoutes = [
+        `${API}/api/extract?url=${encUrl}&type=${audioPref}`, // Primary
+        `${API}/extract?url=${encUrl}&type=${audioPref}`,     // Alt path
+        `${API}/api/scrape?url=${encUrl}&type=${audioPref}`,  // Alt path 2
+        `${API}/api/extract?url=${encUrl}`                    // Fallback (no type param)
+      ];
+
+      let res = null;
+      let data = null;
+
+      for (let route of testRoutes) {
+        try {
+          let tempRes = await fetch(route, { signal: controller.signal });
+          if (tempRes.ok) {
+            res = tempRes;
+            data = await res.json();
+            log(`Slot ${idx + 1}: Successfully connected to backend via ${route.split('?')[0]}`, 'success');
+            break;
+          }
+        } catch (e) {
+          // Ignore network errors and continue testing routes
         }
-        throw new Error(`Extraction HTTP ${res.status}`);
       }
-      
-      const data = await res.json();
+
+      if (!res || !res.ok || !data) {
+        throw new Error(`HTTP 404: The Vercel backend failed to scrape this URL. The API route might be wrong, or Anikoto is blocking your Vercel server.`);
+      }
 
       const m3u8Url = data.m3u8 || data.url || (data.sources && data.sources[0]?.file);
-      if (!m3u8Url) throw new Error("Could not find m3u8 stream in API response");
+      if (!m3u8Url) throw new Error("Backend responded, but could not find an m3u8 stream link in the response.");
 
       const referer = data.referer || data.headers?.Referer || "";
       
-      // Build an intelligent filename if missing
       let titleFallback = url.split('/').pop() || `video_${Date.now()}`;
       let filename = data.title ? data.title.replace(/[^a-z0-9]/gi, '_') : titleFallback;
-      filename = `${filename}_${audioPref.toUpperCase()}`; // Append SUB/DUB to name
+      filename = `${filename}_${audioPref.toUpperCase()}`; 
       if (!filename.endsWith('.ts')) filename += '.ts';
 
       log(`Slot ${idx + 1}: Found playlist, beginning download...`, 'success');
       
-      // 2. DOWNLOAD HLS STREAM
       await downloadHLS(idx, m3u8Url, referer, filename, controller.signal);
-      return true; // Return success to batch processor
+      return true; 
 
     } catch (err) {
       if (err.name === 'AbortError') return false;
@@ -376,12 +390,12 @@
       document.getElementById(`status-${idx}`).style.color = 'var(--error)';
       updateSlotUI(idx);
       log(`Slot ${idx + 1}: ${err.message}`, 'error');
-      return false; // Return fail to batch processor to stop looping
+      return false; 
     }
   }
 
   // ==========================================
-  // UPDATED HLS DOWNLOADER (WITH FALLBACKS)
+  // HLS DOWNLOADER & PROXY FALLBACKS
   // ==========================================
   async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
     Slots[idx].status = 'Fetching playlist...';
@@ -399,20 +413,20 @@
       log(`Slot ${idx + 1}: Proxy blocked, trying direct connection...`, 'warn');
       
       resp = await fetch(m3u8Url, { signal });
-      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. You may be rate-limited.`);
+      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. Host requires a working proxy.`);
     }
 
     const m3u8Text = await resp.text();
     const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
     const resolveUrl = u => u.startsWith('http') ? u : m3u8Url.replace(/[^/]*$/, '') + u;
 
-    // Handle Master Playlists
+    // Handle Master Playlists (Select best resolution)
     if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
       let bestUrl = null;
       for (let j = 0; j < lines.length; j++) {
         if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j+1]) {
           bestUrl = lines[j+1]; 
-          break; // Grabs first resolution
+          break; 
         }
       }
       return downloadHLS(idx, resolveUrl(bestUrl), referer, filename, signal);
