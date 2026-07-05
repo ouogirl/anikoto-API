@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault v6</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mux.js/dist/mux.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 :root{--bg:#07070f;--card:rgba(13,13,25,.75);--border:rgba(255,255,255,.06);--glow:rgba(139,92,246,.15)}
@@ -384,27 +385,74 @@ function renderDone() {
   if (!Done.length) { el.innerHTML = '<span class="text-slate-700">No completed downloads</span>'; return; }
   el.innerHTML = Done.map((d,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80"><svg class="w-3 h-3 inline mr-1 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob?`<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>`:''}</div>`).join('');
 }
-function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
+function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownloadDirect(d.blob,d.filename); else toast('File expired',false); }
 
 function triggerBrowserDownload(blob, filename) {
-  // If the file extension is .ts, we perform a 'container swap' so the iOS Photo Gallery treats it as an MP4.
-  let targetFilename = filename;
-  let targetMimeType = 'video/mp2t';
-  
-  if (filename.toLowerCase().endsWith('.ts')) {
-    targetFilename = filename.substring(0, filename.length - 3) + '.mp4';
-    targetMimeType = 'video/mp4';
-  }
+  // For non-TS files (like already-MP4 from direct download), download directly
+  triggerBrowserDownloadDirect(blob, filename);
+}
 
-  const file = new File([blob], targetFilename, { type: targetMimeType, lastModified: Date.now() });
+function triggerBrowserDownloadDirect(blob, filename) {
+  const file = new File([blob], filename, { type: 'video/mp4', lastModified: Date.now() });
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');
   a.href = url;
-  a.download = targetFilename;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 180000);
+}
+
+function transmuxTsToMp4(tsBlob) {
+  return new Promise((resolve, reject) => {
+    try {
+      const transmuxer = new muxjs.mp4.Transmuxer();
+      const mp4Chunks = [];
+      let initSegment = null;
+
+      transmuxer.on('data', function(segment) {
+        if (segment.initSegment && segment.initSegment.byteLength > 0) {
+          initSegment = new Uint8Array(segment.initSegment);
+        }
+        if (segment.data && segment.data.byteLength > 0) {
+          mp4Chunks.push(new Uint8Array(segment.data));
+        }
+      });
+
+      transmuxer.on('done', function() {
+        let totalSize = (initSegment ? initSegment.byteLength : 0);
+        for (const chunk of mp4Chunks) {
+          totalSize += chunk.byteLength;
+        }
+        const fullMp4 = new Uint8Array(totalSize);
+        let offset = 0;
+        if (initSegment) {
+          fullMp4.set(initSegment, offset);
+          offset += initSegment.byteLength;
+        }
+        for (const chunk of mp4Chunks) {
+          fullMp4.set(chunk, offset);
+          offset += chunk.byteLength;
+        }
+        resolve(new Blob([fullMp4], { type: 'video/mp4' }));
+      });
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          transmuxer.push(new Uint8Array(e.target.result));
+          transmuxer.flush();
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(tsBlob);
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 function go() {
@@ -491,10 +539,30 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
   await new Promise((res,rej)=>{let act=0;const go=()=>{while(act<CC&&nxt<segs.length){if(signal.aborted){rej(new DOMException('Aborted','AbortError'));return;}const si=nxt++;act++;fetchSeg(si).then(()=>{act--;if(done>=segs.length)res();else go();}).catch(rej);}};go();});
   Slots[idx].status='Combining...';updateSlotUI(idx);
   const total=segData.reduce((a,c)=>a+c.byteLength,0);
-  const blob=new Blob(segData,{type:'video/mp2t'});
-  log(`Slot ${idx+1}: ✅ ${fmtBytes(total)} (H.264+AAC)`,'ok');toast(`Downloaded: ${filename}`);
-  if(AUTO_SAVE)triggerBrowserDownload(blob,filename);
-  Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob});DoneCount++;TotalBytes+=total;renderDone();updateStats();
+  const tsBlob=new Blob(segData,{type:'video/mp2t'});
+  const isTs = filename.toLowerCase().endsWith('.ts');
+  log(`Slot ${idx+1}: ✅ ${fmtBytes(total)} (H.264+AAC)`,'ok');
+  if (isTs) {
+    // Transmux TS → actual MP4 using mux.js, then download + store
+    log(`Slot ${idx+1}: Remuxing to MP4...`,'dl');
+    try {
+      const mp4Blob = await transmuxTsToMp4(tsBlob);
+      const mp4Filename = filename.substring(0, filename.length - 3) + '.mp4';
+      toast(`Downloaded: ${mp4Filename}`);
+      if(AUTO_SAVE) triggerBrowserDownloadDirect(mp4Blob, mp4Filename);
+      Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:mp4Filename,size:mp4Blob.size,blob:mp4Blob});
+    } catch(e) {
+      log(`Slot ${idx+1}: Remux failed, using TS: ${e.message}`,'warn');
+      toast(`Downloaded: ${filename} (TS fallback)`);
+      if(AUTO_SAVE) triggerBrowserDownload(tsBlob,filename);
+      Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob:tsBlob});
+    }
+  } else {
+    toast(`Downloaded: ${filename}`);
+    if(AUTO_SAVE) triggerBrowserDownload(tsBlob,filename);
+    Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename,size:total,blob:tsBlob});
+  }
+  DoneCount++;TotalBytes+=total;renderDone();updateStats();
 }
 
 async function downloadDirect(idx,url,title,signal) {
@@ -503,7 +571,7 @@ async function downloadDirect(idx,url,title,signal) {
   const reader=resp.body.getReader();const chunks=[];
   while(true){if(signal.aborted)throw new DOMException('Aborted','AbortError');const{done,value}=await reader.read();if(done)break;chunks.push(value);Slots[idx].downloaded+=value.byteLength;trackSpeed(idx);if(Date.now()-(Slots[idx]._lu||0)>200){Slots[idx]._lu=Date.now();updateSlotUI(idx);updateStats();}}
   const blob=new Blob(chunks,{type:'video/mp4'});const fn=sanitizeFilename(title)+'.mp4';
-  log(`Slot ${idx+1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`,'ok');toast(`Downloaded: ${fn}`);if(AUTO_SAVE)triggerBrowserDownload(blob,fn);
+  log(`Slot ${idx+1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`,'ok');toast(`Downloaded: ${fn}`);if(AUTO_SAVE)triggerBrowserDownloadDirect(blob,fn);
   Done.unshift({title,filename:fn,size:Slots[idx].downloaded,blob});DoneCount++;TotalBytes+=Slots[idx].downloaded;renderDone();updateStats();
 }
 
@@ -515,7 +583,7 @@ async function testApi() {
 
 loadCfg();
 log('StreamVault v6 ready','ok');
-log('API: '+(API||'same-origin')+' | Output: .ts swapped to .mp4 (iOS Friendly)','api');
+log('API: '+(API||'same-origin')+' | Output: .ts → .mp4 (actual container swap via mux.js)','api');
 if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel','err');document.getElementById('setupBanner').classList.remove('hidden');}
 testApi();
 setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
