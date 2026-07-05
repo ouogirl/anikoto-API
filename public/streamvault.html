@@ -1,570 +1,425 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StreamVault v6</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#0a0a12;color:#e2e8f0;min-height:100vh}
-.glass{background:rgba(15,15,30,.7);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:14px}
-.grad{background:linear-gradient(135deg,#a855f7,#6366f1,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.pbar{height:6px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden}
-.pfill{height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#a855f7,#22d3ee);transition:width .2s}
-.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;text-transform:uppercase}
-.b-sub{background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
-.b-dub{background:rgba(249,115,22,.2);color:#fdba74;border:1px solid rgba(249,115,22,.3)}
-.b-ok{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.3)}
-.slot.on{border-color:rgba(168,85,247,.4)!important;box-shadow:0 0 25px rgba(168,85,247,.1)}
-.mono{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.5}
-#logBox{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(168,85,247,.3) transparent}
-.btn{font-weight:600;padding:10px 20px;border-radius:10px;border:none;cursor:pointer;transition:all .15s;font-size:13px}
-.btn1{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff}
-.btn1:hover{box-shadow:0 4px 15px rgba(99,102,241,.4)}
-.btn1:disabled{opacity:.5;cursor:not-allowed}
-.btn2{background:rgba(255,255,255,.06);color:#94a3b8;padding:6px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer}
-.btn2:hover{background:rgba(255,255,255,.1);color:#e2e8f0}
-.btnAll{background:linear-gradient(135deg,#059669,#10b981);color:#fff}
-input,select{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 14px;color:#e2e8f0;font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif}
-input:focus{border-color:rgba(168,85,247,.5)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center}
-.modal.show{display:flex}
-.mbox{background:#0f0f1a;border:1px solid rgba(255,255,255,.1);border-radius:18px;max-width:540px;width:92%;max-height:85vh;overflow-y:auto;padding:24px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:14px;height:14px;border:2px solid rgba(168,85,247,.3);border-top-color:#a855f7;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-@keyframes si{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.anim{animation:si .2s ease-out}
-.toast{position:fixed;bottom:20px;right:20px;z-index:200;animation:si .2s ease-out}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamVault - HLS Downloader</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --primary: #3b82f6;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --success: #10b981;
+      --error: #ef4444;
+      --warn: #f59e0b;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .panel {
+      background: var(--surface);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .header h2 { margin: 0; }
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: white;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: var(--primary);
+    }
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2563eb; }
+    
+    /* Log Window */
+    .log-window {
+      background: #020617;
+      padding: 15px;
+      border-radius: 8px;
+      height: 150px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border: 1px solid #334155;
+    }
+    .log-info { color: var(--text); }
+    .log-success { color: var(--success); }
+    .log-warn { color: var(--warn); }
+    .log-error { color: var(--error); }
+
+    /* Slots */
+    .slot {
+      background: #0f172a;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #334155;
+    }
+    .slot-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .progress-bar {
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.2s;
+    }
+    .slot-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
 </head>
-<body class="p-4" onload="loadCfg()">
-<div class="max-w-5xl mx-auto">
+<body>
 
-<header class="flex items-center justify-between mb-4">
-  <div class="flex items-center gap-3">
-    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-      <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+<div class="container">
+  <div class="panel">
+    <div class="header">
+      <h2>StreamVault</h2>
+      <div>
+        <label><input type="checkbox" id="autoSave" checked> Auto-Save File</label>
+      </div>
     </div>
-    <div><h1 class="text-lg font-bold grad">StreamVault v6</h1><p class="text-[9px] text-slate-500 uppercase tracking-widest">Anime Downloader</p></div>
-  </div>
-  <div class="flex items-center gap-2">
-    <button onclick="document.getElementById('cfgModal').classList.add('show')" class="btn2">⚙️ Settings</button>
-  </div>
-</header>
-
-<div id="setupBanner" class="hidden mb-4 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-  <h3 class="text-sm font-bold text-yellow-300 mb-1">📋 Host this page on your Vercel API</h3>
-  <p class="text-xs text-slate-400 mb-2">Deploying keeps CORS issues away. Currently testing locally.</p>
-  <button onclick="this.parentElement.classList.add('hidden')" class="text-[10px] text-slate-500 hover:text-white">Dismiss</button>
-</div>
-
-<div class="glass p-3 mb-4 grid grid-cols-4 gap-3 text-center">
-  <div><div class="text-base font-bold text-purple-400" id="sA">0/2</div><div class="text-[9px] text-slate-500 uppercase">Active</div></div>
-  <div><div class="text-base font-bold text-cyan-400" id="sS">—</div><div class="text-[9px] text-slate-500 uppercase">Speed</div></div>
-  <div><div class="text-base font-bold text-green-400" id="sD">0</div><div class="text-[9px] text-slate-500 uppercase">Done</div></div>
-  <div><div class="text-base font-bold text-indigo-400" id="sB">0 B</div><div class="text-[9px] text-slate-500 uppercase">Downloaded</div></div>
-</div>
-
-<div class="glass p-4 mb-4">
-  <div class="flex gap-2 items-center">
-    <div class="relative flex-1 min-w-0">
-      <input type="url" id="urlIn" placeholder="Paste Anikoto or HiAnime URL..." oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()">
-      <div id="urlBadge" class="absolute right-3 top-1/2 -translate-y-1/2 hidden"></div>
+    <div class="input-group">
+      <input type="text" id="urlInput" placeholder="Enter video URL (e.g., https://anikoto.cz/watch/...)">
+      <button onclick="startTask()">Download</button>
     </div>
-    <select id="audSel" class="w-20 shrink-0 text-center text-xs p-3">
-      <option value="sub">SUB</option>
-      <option value="dub">DUB</option>
-    </select>
-    <button onclick="go()" class="btn btn1 shrink-0">⬇ Ep</button>
-    <button onclick="goAll()" class="btn btnAll shrink-0">📦 All Eps</button>
   </div>
-  <div id="urlHint" class="text-[11px] mt-1.5 hidden"></div>
-</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-  <div class="glass slot p-4" id="sl0"><div class="flex justify-between mb-2"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-slate-600" id="d0"></div><span class="text-[10px] text-slate-500 font-semibold uppercase">Slot 1</span></div><button class="text-slate-600 hover:text-red-400 hidden" id="x0" onclick="cancel(0)">✕</button></div><div id="e0" class="text-center py-5 text-slate-600 text-xs">Idle</div><div id="a0" class="hidden"><div class="text-sm font-semibold text-white truncate" id="t0">—</div><div class="text-[10px] text-slate-500 mb-1" id="u0">—</div><div class="flex gap-1 mb-2" id="bg0"></div><div class="pbar mb-2"><div class="pfill" id="p0" style="width:0%"></div></div><div class="flex justify-between text-[10px] text-slate-500"><span id="pc0">0%</span><span id="sz0">—</span><span id="sp0">—</span><span id="et0">—</span></div><div class="text-[10px] text-slate-600 mt-1" id="st0">...</div></div></div>
-  <div class="glass slot p-4" id="sl1"><div class="flex justify-between mb-2"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-slate-600" id="d1"></div><span class="text-[10px] text-slate-500 font-semibold uppercase">Slot 2</span></div><button class="text-slate-600 hover:text-red-400 hidden" id="x1" onclick="cancel(1)">✕</button></div><div id="e1" class="text-center py-5 text-slate-600 text-xs">Idle</div><div id="a1" class="hidden"><div class="text-sm font-semibold text-white truncate" id="t1">—</div><div class="text-[10px] text-slate-500 mb-1" id="u1">—</div><div class="flex gap-1 mb-2" id="bg1"></div><div class="pbar mb-2"><div class="pfill" id="p1" style="width:0%"></div></div><div class="flex justify-between text-[10px] text-slate-500"><span id="pc1">0%</span><span id="sz1">—</span><span id="sp1">—</span><span id="et1">—</span></div><div class="text-[10px] text-slate-600 mt-1" id="st1">...</div></div></div>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-  <div class="glass p-3"><div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">📋 Queue (<span id="qCount">0</span>)</span><button onclick="Q=[];renderQ()" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div><div id="qEl" class="text-xs text-slate-600 text-center py-2 max-h-40 overflow-y-auto">Empty</div></div>
-  <div class="glass p-3"><div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">✅ Completed</span><button onclick="Done=[];renderDone()" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div><div id="dEl" class="text-xs text-slate-600 text-center py-2 max-h-40 overflow-y-auto">Empty</div></div>
-</div>
-
-<div class="glass p-3">
-  <div class="flex justify-between mb-2"><span class="text-xs font-semibold text-slate-400">📜 Log</span><button onclick="document.getElementById('logBox').innerHTML=''" class="btn2" style="padding:2px 8px;font-size:10px">Clear</button></div>
-  <div id="logBox" class="mono text-slate-500"></div>
-</div>
-</div>
-
-<div class="modal" id="cfgModal">
-<div class="mbox">
-  <div class="flex justify-between mb-4"><h2 class="font-bold grad text-lg">Settings</h2><button onclick="document.getElementById('cfgModal').classList.remove('show')" class="text-slate-500 hover:text-white text-xl">&times;</button></div>
-  <div class="space-y-4">
-    <div>
-      <label class="text-sm font-medium text-slate-300 block mb-1">API Base URL</label>
-      <input id="cfgApi" placeholder="https://anikoto-api-ten.vercel.app">
-      <p class="text-[10px] text-slate-500 mt-1">Your Vercel-deployed API (Leave empty for same origin)</p>
+  <div class="panel">
+    <div class="header">
+      <h2>System Logs</h2>
     </div>
-    <div class="flex items-center justify-between">
-      <label class="text-sm text-slate-300">Auto-download when done</label>
-      <input type="checkbox" id="cfgAuto" checked class="w-4 h-4 accent-purple-500">
-    </div>
-    <button onclick="saveCfg()" class="btn btn1 w-full">💾 Save</button>
+    <div class="log-window" id="logWindow"></div>
   </div>
-</div>
+
+  <div class="panel" id="slotsPanel" style="display: none;">
+    <div class="header">
+      <h2>Active Downloads</h2>
+    </div>
+    <div id="slotsContainer"></div>
+  </div>
 </div>
 
 <script>
-// ==================== Configuration ====================
-const ORIGIN = window.location.origin;
-const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('localhost');
-let API = IS_DEPLOYED ? '' : 'https://anikoto-api-ten.vercel.app';
-let AUTO_SAVE = true;
+  // ==========================================
+  // GLOBALS & CONFIG
+  // ==========================================
+  const API = "https://anikoto-api-ten.vercel.app"; // Your backend API
+  let Slots = [];
+  let Done = [];
+  let TotalBytes = 0;
+  let DoneCount = 0;
 
-const Slots = [null, null];
-const AbortCtrl = [null, null];
-let Q = [];
-let Done = [];
-let TotalBytes = 0;
-let DoneCount = 0;
+  const UI = {
+    log: document.getElementById('logWindow'),
+    url: document.getElementById('urlInput'),
+    slots: document.getElementById('slotsContainer'),
+    slotsPanel: document.getElementById('slotsPanel'),
+    autoSave: document.getElementById('autoSave')
+  };
 
-// ==================== Config Persistence ====================
-function loadCfg() {
-  try {
-    const c = JSON.parse(localStorage.getItem('sv6') || '{}');
-    if (c.api !== undefined) API = c.api;
-    if (c.auto !== undefined) AUTO_SAVE = c.auto;
-  } catch(e) { }
-  
-  document.getElementById('cfgApi').value = API || '';
-  document.getElementById('cfgAuto').checked = AUTO_SAVE;
-  if (window.location.protocol === 'file:') {
-    document.getElementById('setupBanner').classList.remove('hidden');
-  }
-}
-
-function saveCfg() {
-  const v = document.getElementById('cfgApi').value.trim();
-  API = v;
-  AUTO_SAVE = document.getElementById('cfgAuto').checked;
-  localStorage.setItem('sv6', JSON.stringify({ api: API, auto: AUTO_SAVE }));
-  document.getElementById('cfgModal').classList.remove('show');
-  toast('Saved!');
-}
-
-// ==================== Utilities ====================
-function fmtBytes(b) {
-  if (!b || b <= 0) return '0 B';
-  const units = ['B','KB','MB','GB'];
-  const i = Math.floor(Math.log(b) / Math.log(1024));
-  return (b / Math.pow(1024, i)).toFixed(i > 1 ? 2 : 0) + ' ' + units[i];
-}
-
-function fmtETA(seconds) {
-  if (!seconds || !isFinite(seconds) || seconds <= 0) return '—';
-  if (seconds < 60) return Math.round(seconds) + 's';
-  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ' + Math.round(seconds % 60) + 's';
-  return Math.floor(seconds / 3600) + 'h ' + Math.floor((seconds % 3600) / 60) + 'm';
-}
-
-function sanitizeFilename(name) {
-  return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_').substring(0, 80);
-}
-
-function log(msg, type = 'info') {
-  const el = document.getElementById('logBox');
-  const colors = { info: 'text-slate-400', ok: 'text-green-400', err: 'text-red-400', warn: 'text-yellow-400', api: 'text-purple-400', dl: 'text-cyan-400' };
-  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-  const div = document.createElement('div');
-  div.className = 'mono anim';
-  div.innerHTML = `<span class="text-slate-600">[${ts}]</span> <span class="${colors[type] || colors.info}">${msg}</span>`;
-  el.appendChild(div);
-  while (el.children.length > 200) el.removeChild(el.firstChild);
-  el.scrollTop = el.scrollHeight;
-}
-
-function toast(msg, success = true) {
-  const d = document.createElement('div');
-  d.className = 'toast';
-  d.innerHTML = `<div class="glass ${success ? 'border-green-500/30' : 'border-red-500/30'} p-3 text-sm">${msg}</div>`;
-  document.body.appendChild(d);
-  setTimeout(() => { if (d.parentNode) d.remove(); }, 3500);
-}
-
-// ==================== URL Parsing ====================
-function parseUrl(url) {
-  let m = url.match(/(?:anikoto|anikototv)\.\w+\/watch\/([a-z0-9][a-z0-9-]*[a-z0-9])(?:\/ep-(\d+))?/i);
-  if (m) return { slug: m[1], ep: m[2] ? +m[2] : 1, platform: 'anikoto' };
-  m = url.match(/hianime[s]?\.\w+\/watch\/([a-z0-9][a-z0-9-]*[a-z0-9])/i);
-  if (m) {
-    const epMatch = url.match(/[?&]ep=(\d+)/);
-    return { slug: m[1], ep: epMatch ? +epMatch[1] : 1, platform: 'hianime' };
-  }
-  return null;
-}
-
-function detectUrl() {
-  const url = document.getElementById('urlIn').value.trim();
-  const badge = document.getElementById('urlBadge');
-  const hint = document.getElementById('urlHint');
-  if (!url) { badge.classList.add('hidden'); hint.classList.add('hidden'); return; }
-  const p = parseUrl(url);
-  if (p) {
-    badge.innerHTML = `<span class="badge b-ok">${p.platform}</span>`;
-    hint.innerHTML = `<span class="text-green-400">✓ Ep ${p.ep}</span>`;
-  } else {
-    badge.innerHTML = '<span class="badge b-ok">URL</span>';
-    hint.innerHTML = '<span class="text-slate-400">Direct URL</span>';
-  }
-  badge.classList.remove('hidden');
-  hint.classList.remove('hidden');
-}
-
-// ==================== UI Updates ====================
-function updateStats() {
-  document.getElementById('sA').textContent = Slots.filter(Boolean).length + '/2';
-  document.getElementById('sD').textContent = DoneCount;
-  document.getElementById('sB').textContent = fmtBytes(TotalBytes);
-  let totalSpeed = 0;
-  Slots.forEach(s => { if (s) totalSpeed += (s.speed || 0); });
-  document.getElementById('sS').textContent = totalSpeed > 0 ? fmtBytes(totalSpeed) + '/s' : '—';
-}
-
-function updateSlotUI(idx) {
-  const s = Slots[idx];
-  const $ = id => document.getElementById(id);
-  if (!s) {
-    $('e' + idx).classList.remove('hidden');
-    $('a' + idx).classList.add('hidden');
-    $('x' + idx).classList.add('hidden');
-    $('d' + idx).className = 'w-2 h-2 rounded-full bg-slate-600';
-    $('sl' + idx).classList.remove('on');
-    return;
-  }
-  $('e' + idx).classList.add('hidden');
-  $('a' + idx).classList.remove('hidden');
-  $('x' + idx).classList.remove('hidden');
-  $('d' + idx).className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
-  $('sl' + idx).classList.add('on');
-  $('t' + idx).textContent = s.title || '—';
-  $('u' + idx).textContent = s.subtitle || '';
-  
-  let badges = '';
-  if (s.audioType) badges += `<span class="badge b-${s.audioType}">${s.audioType}</span>`;
-  if (s.serverName) badges += `<span class="badge b-ok" style="font-size:9px">${s.serverName}</span>`;
-  $('bg' + idx).innerHTML = badges;
-  
-  const pct = s.segTotal ? (s.segDone / s.segTotal * 100) : (s.totalSize ? s.downloaded / s.totalSize * 100 : 0);
-  $('p' + idx).style.width = Math.min(pct, 100) + '%';
-  $('pc' + idx).textContent = Math.round(pct) + '%';
-  $('sz' + idx).textContent = s.segTotal ? `${s.segDone}/${s.segTotal} segs` : fmtBytes(s.downloaded);
-  $('sp' + idx).textContent = s.speed > 0 ? fmtBytes(s.speed) + '/s' : '—';
-  
-  let eta = '—';
-  if (s.speed > 0 && s.segTotal && s.segDone > 0) {
-    eta = fmtETA((s.elapsed / s.segDone) * (s.segTotal - s.segDone));
-  }
-  $('et' + idx).textContent = eta;
-  $('st' + idx).textContent = s.status || '';
-}
-
-function renderQ() {
-  const el = document.getElementById('qEl');
-  document.getElementById('qCount').textContent = Q.length;
-  if (!Q.length) { el.innerHTML = 'Empty'; return; }
-  el.innerHTML = Q.map((q, i) =>
-    `<div class="flex justify-between p-1.5 bg-white/[.02] rounded mb-1 anim"><span class="truncate">${q.title}</span><button onclick="Q.splice(${i},1);renderQ();updateStats()" class="text-slate-600 hover:text-red-400 ml-2 shrink-0">✕</button></div>`
-  ).join('');
-}
-
-function renderDone() {
-  const el = document.getElementById('dEl');
-  if (!Done.length) { el.innerHTML = 'Empty'; return; }
-  el.innerHTML = Done.map((d, i) =>
-    `<div class="flex justify-between p-1.5 bg-white/[.02] rounded mb-1 anim"><span class="truncate text-green-400">✓ ${d.title} <span class="text-slate-600">${fmtBytes(d.size)}</span></span>${d.blob ? `<button onclick="redownload(${i})" class="btn2 ml-2 shrink-0" style="padding:2px 8px">↓</button>` : ''}</div>`
-  ).join('');
-}
-
-function redownload(i) {
-  const d = Done[i];
-  if (d && d.blob) triggerBrowserDownload(d.blob, d.filename);
-  else toast('File expired from memory', false);
-}
-
-function triggerBrowserDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 180000); // 3 minutes expiration
-}
-
-// ==================== App Actions ====================
-function go() {
-  const url = document.getElementById('urlIn').value.trim();
-  if (!url) { toast('Enter a URL', false); return; }
-  const parsed = parseUrl(url);
-  const audio = document.getElementById('audSel').value;
-
-  let item;
-  if (parsed) {
-    const cleanTitle = parsed.slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
-    item = { url, slug: parsed.slug, ep: parsed.ep, platform: parsed.platform, audio, title: cleanTitle + ' Ep' + parsed.ep };
-  } else {
-    item = { url, audio, title: url.split('/').pop()?.substring(0, 30) || 'Download', platform: 'direct' };
+  // ==========================================
+  // UTILITIES
+  // ==========================================
+  function log(msg, type = 'info') {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    const div = document.createElement('div');
+    div.className = `log-${type}`;
+    div.textContent = `[${time}] ${msg}`;
+    UI.log.appendChild(div);
+    UI.log.scrollTop = UI.log.scrollHeight;
   }
 
-  queueOrStart(item);
-  document.getElementById('urlIn').value = '';
-  document.getElementById('urlBadge').classList.add('hidden');
-  document.getElementById('urlHint').classList.add('hidden');
-}
+  function fmtBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
 
-async function goAll() {
-  const url = document.getElementById('urlIn').value.trim();
-  if (!url) { toast('Enter a URL', false); return; }
-  const parsed = parseUrl(url);
-  if (!parsed) { toast('Not an anime URL', false); return; }
-  const audio = document.getElementById('audSel').value;
+  function triggerBrowserDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
-  let slug = parsed.slug;
-  let title = slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
-  toast('Loading episodes...');
+  // ==========================================
+  // UI MANAGEMENT
+  // ==========================================
+  function createSlotUI(idx, url) {
+    UI.slotsPanel.style.display = 'block';
+    const div = document.createElement('div');
+    div.className = 'slot';
+    div.id = `slot-${idx}`;
+    div.innerHTML = `
+      <div class="slot-header">
+        <strong style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;" title="${url}">${url}</strong>
+        <span id="status-${idx}">Initializing...</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="fill-${idx}"></div></div>
+      <div class="slot-stats">
+        <span id="progress-text-${idx}">0 / 0 chunks</span>
+        <span id="size-${idx}">0 MB</span>
+      </div>
+    `;
+    UI.slots.appendChild(div);
+  }
 
-  try {
-    const epResp = await fetch(`${API}/api/anime/${slug}/episodes`);
-    if (!epResp.ok) throw new Error('Episode check failed');
-    const epData = await epResp.json();
+  function updateSlotUI(idx) {
+    const slot = Slots[idx];
+    if (!slot) return;
     
-    let episodeCount = 0;
-    if (epData.ok && epData.data) {
-      const eps = epData.data.episodes || epData.data;
-      if (Array.isArray(eps)) episodeCount = eps.length;
-    }
-
-    if (!episodeCount) throw new Error('Could not find episode count');
-
-    if (!confirm(`Queue all ${episodeCount} episodes?`)) return;
-
-    for (let epNum = 1; epNum <= episodeCount; epNum++) {
-      queueOrStart({
-        url, slug, ep: epNum, platform: 'anikoto', audio,
-        title: `${title} Ep${epNum}`
-      });
-    }
-    toast(`Queued ${episodeCount} episodes!`);
-  } catch (e) {
-    log(e.message, 'err');
-    toast(e.message, false);
-  }
-}
-
-function queueOrStart(item) {
-  const freeSlot = Slots.findIndex(s => s === null);
-  if (freeSlot !== -1) startSlot(freeSlot, item);
-  else {
-    Q.push(item);
-    renderQ();
-    log('Queued: ' + item.title);
-  }
-}
-
-// ==================== Slot Processing ====================
-async function startSlot(idx, item) {
-  const ac = new AbortController();
-  AbortCtrl[idx] = ac;
-  Slots[idx] = {
-    ...item,
-    downloaded: 0, totalSize: 0, speed: 0, elapsed: 0,
-    segDone: 0, segTotal: 0, status: 'Starting...',
-    startTime: Date.now(), lastSpeedCheck: Date.now(), lastBytes: 0,
-    subtitle: `Ep ${item.ep || ''}`, audioType: item.audio, serverName: ''
-  };
-  updateSlotUI(idx);
-  
-  try {
-    if (item.platform === 'anikoto' || item.platform === 'hianime') {
-      await downloadAnime(idx, item, ac.signal);
-    }
-  } catch (e) {
-    if (e.name === 'AbortError') log(`Slot ${idx + 1}: Cancelled`, 'warn');
-    else log(`Slot ${idx + 1}: Error - ${e.message}`, 'err');
-  }
-
-  Slots[idx] = null;
-  AbortCtrl[idx] = null;
-  updateSlotUI(idx);
-  updateStats();
-
-  if (Q.length > 0) {
-    const next = Q.shift();
-    renderQ();
-    startSlot(idx, next);
-  }
-}
-
-function cancel(idx) {
-  if (AbortCtrl[idx]) AbortCtrl[idx].abort();
-}
-
-function trackSpeed(idx) {
-  const s = Slots[idx];
-  if (!s) return;
-  const now = Date.now();
-  const dt = (now - s.lastSpeedCheck) / 1000;
-  if (dt >= 0.5) {
-    s.speed = (s.downloaded - s.lastBytes) / dt;
-    s.lastBytes = s.downloaded;
-    s.lastSpeedCheck = now;
-    s.elapsed = (now - s.startTime) / 1000;
-  }
-}
-
-// ==================== Network Core ====================
-async function downloadAnime(idx, item, signal) {
-  const { slug, ep, audio } = item;
-  Slots[idx].status = 'Getting sources...';
-  updateSlotUI(idx);
-
-  const resp = await fetch(`${API}/api/watch/${slug}?ep=${ep}`, { signal });
-  if (!resp.ok) throw new Error('Failed fetching stream URL');
-  
-  const text = await resp.text();
-  const sources = [];
-  
-  try {
-    const json = JSON.parse(text);
-    if (json.data && json.data.sources) sources.push(...json.data.sources);
-  } catch {
-    for (const line of text.split('\n')) {
-      if (!line.startsWith('data: ')) continue;
-      try {
-        const obj = JSON.parse(line.substring(6));
-        if (obj.type === 'source' && obj.source) sources.push(obj.source);
-      } catch { }
+    document.getElementById(`status-${idx}`).textContent = slot.status;
+    document.getElementById(`size-${idx}`).textContent = fmtBytes(slot.downloaded);
+    
+    if (slot.segTotal > 0) {
+      const pct = (slot.segDone / slot.segTotal) * 100;
+      document.getElementById(`fill-${idx}`).style.width = `${pct}%`;
+      document.getElementById(`progress-text-${idx}`).textContent = `${slot.segDone} / ${slot.segTotal} chunks`;
     }
   }
 
-  let candidates = sources.filter(s => s.type === audio && s.m3u8);
-  if (!candidates.length) candidates = sources.filter(s => s.m3u8);
-  if (!candidates.length) throw new Error('No m3u8 sources found.');
+  // ==========================================
+  // MAIN LOGIC
+  // ==========================================
+  async function startTask() {
+    const url = UI.url.value.trim();
+    if (!url) return alert('Please enter a URL');
+    UI.url.value = '';
 
-  const preferred = candidates.find(s => /^HD/i.test(s.server)) || candidates[0];
-  Slots[idx].audioType = preferred.type;
-  Slots[idx].serverName = preferred.server;
-  
-  // Use TS extension since raw M3U8 segments are MPEG-TS.
-  const filename = sanitizeFilename(`${item.title}_${preferred.type}`) + '.ts';
-  
-  await downloadHLS(idx, preferred.m3u8, preferred.referer, filename, signal);
-}
+    const idx = Slots.length;
+    const controller = new AbortController();
+    Slots.push({
+      url,
+      status: 'Extracting data...',
+      downloaded: 0,
+      segDone: 0,
+      segTotal: 0,
+      controller
+    });
 
-async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
-  Slots[idx].status = 'Fetching playlist...';
-  updateSlotUI(idx);
+    createSlotUI(idx, url);
+    log(`Slot ${idx + 1}: Starting extraction for ${url}`);
 
-  let fetchUrl = m3u8Url.includes('/api/proxy') ? m3u8Url : 
-    `${API}/api/proxy?url=${encodeURIComponent(m3u8Url)}&referer=${encodeURIComponent(referer || '')}`;
-
-  const resp = await fetch(fetchUrl, { signal });
-  if (!resp.ok) throw new Error('Playlist error');
-  const m3u8Text = await resp.text();
-  const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
-
-  const resolveUrl = u => u.startsWith('http') ? u : m3u8Url.replace(/[^/]*$/, '') + u;
-
-  if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
-    let bestUrl = null;
-    for (let j = 0; j < lines.length; j++) {
-      if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j+1]) {
-        bestUrl = lines[j+1]; 
-        break; // Default to first (usually highest) resolution
-      }
-    }
-    return downloadHLS(idx, resolveUrl(bestUrl), referer, filename, signal);
-  }
-
-  const segmentUrls = lines.filter(l => l && !l.startsWith('#')).map(resolveUrl);
-  if (!segmentUrls.length) throw new Error('No video chunks found in playlist.');
-
-  Slots[idx].segTotal = segmentUrls.length;
-  Slots[idx].segDone = 0;
-  updateSlotUI(idx);
-
-  const CONCURRENCY = 10;
-  const segmentData = new Array(segmentUrls.length);
-  let nextSegIdx = 0;
-  let completedSegs = 0;
-
-  // The Worker Function
-  const fetchSegment = async () => {
-    while (nextSegIdx < segmentUrls.length) {
-      if (signal.aborted) throw new Error('AbortError');
-      const currentIdx = nextSegIdx++;
-      const target = `${API}/api/proxy?url=${encodeURIComponent(segmentUrls[currentIdx])}&referer=${encodeURIComponent(referer || '')}`;
+    try {
+      // 1. EXTRACT DATA FROM API
+      const extractUrl = `${API}/api/extract?url=${encodeURIComponent(url)}`;
+      const res = await fetch(extractUrl, { signal: controller.signal });
       
-      try {
-        const r = await fetch(target, { signal });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const buf = await r.arrayBuffer();
+      if (!res.ok) throw new Error(`Extraction HTTP ${res.status}`);
+      const data = await res.json();
+
+      // Adapt based on your exact API response structure
+      const m3u8Url = data.m3u8 || data.url || (data.sources && data.sources[0]?.file);
+      if (!m3u8Url) throw new Error("Could not find m3u8 stream in API response");
+
+      const referer = data.referer || data.headers?.Referer || "";
+      let filename = data.title ? data.title.replace(/[^a-z0-9]/gi, '_') : `video_${Date.now()}`;
+      if (!filename.endsWith('.ts')) filename += '.ts';
+
+      log(`Slot ${idx + 1}: Found playlist, beginning download...`, 'success');
+      
+      // 2. DOWNLOAD HLS STREAM
+      await downloadHLS(idx, m3u8Url, referer, filename, controller.signal);
+
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      Slots[idx].status = `Error: ${err.message}`;
+      updateSlotUI(idx);
+      log(`Slot ${idx + 1}: ${err.message}`, 'error');
+    }
+  }
+
+  // ==========================================
+  // UPDATED HLS DOWNLOADER (WITH FALLBACKS)
+  // ==========================================
+  async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
+    Slots[idx].status = 'Fetching playlist...';
+    updateSlotUI(idx);
+
+    let fetchUrl = m3u8Url.includes('/api/proxy') ? m3u8Url : 
+      `${API}/api/proxy?url=${encodeURIComponent(m3u8Url)}&referer=${encodeURIComponent(referer || '')}`;
+
+    let resp;
+    try {
+      // Attempt 1: Route through the API Proxy
+      resp = await fetch(fetchUrl, { signal });
+      if (!resp.ok) throw new Error(`Proxy HTTP ${resp.status}`);
+    } catch (proxyErr) {
+      if (signal.aborted) throw proxyErr;
+      log(`Slot ${idx + 1}: Proxy blocked (${proxyErr.message}), trying direct connection...`, 'warn');
+      
+      // Attempt 2: Direct connection fallback (bypasses proxy CORS if possible)
+      resp = await fetch(m3u8Url, { signal });
+      if (!resp.ok) throw new Error(`Playlist blocked: HTTP ${resp.status}. You may be rate-limited or require a custom proxy.`);
+    }
+
+    const m3u8Text = await resp.text();
+    const lines = m3u8Text.split('\n').map(l => l.trim()).filter(Boolean);
+
+    const resolveUrl = u => u.startsWith('http') ? u : m3u8Url.replace(/[^/]*$/, '') + u;
+
+    // Handle Master Playlists (Auto-select highest resolution)
+    if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
+      let bestUrl = null;
+      for (let j = 0; j < lines.length; j++) {
+        if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j+1]) {
+          bestUrl = lines[j+1]; 
+          break; // Grabs the first (usually highest) resolution
+        }
+      }
+      return downloadHLS(idx, resolveUrl(bestUrl), referer, filename, signal);
+    }
+
+    const segmentUrls = lines.filter(l => l && !l.startsWith('#')).map(resolveUrl);
+    if (!segmentUrls.length) throw new Error('No video chunks found in playlist.');
+
+    Slots[idx].segTotal = segmentUrls.length;
+    Slots[idx].segDone = 0;
+    updateSlotUI(idx);
+
+    const CONCURRENCY = 10;
+    const segmentData = new Array(segmentUrls.length);
+    let nextSegIdx = 0;
+    let completedSegs = 0;
+
+    const fetchSegment = async () => {
+      while (nextSegIdx < segmentUrls.length) {
+        if (signal.aborted) throw new Error('AbortError');
+        const currentIdx = nextSegIdx++;
         
-        segmentData[currentIdx] = new Uint8Array(buf);
-        completedSegs++;
-        Slots[idx].segDone = completedSegs;
-        Slots[idx].downloaded += buf.byteLength;
-        TotalBytes += buf.byteLength;
+        let target = segmentUrls[currentIdx];
+        if (!target.includes('/api/proxy') && API !== '') {
+           target = `${API}/api/proxy?url=${encodeURIComponent(target)}&referer=${encodeURIComponent(referer || '')}`;
+        }
         
-        trackSpeed(idx);
-        updateSlotUI(idx);
-        updateStats();
-      } catch (err) {
-        log(`Chunk ${currentIdx} failed, dropping file...`, 'err');
-        throw err;
+        try {
+          let r = await fetch(target, { signal });
+          
+          // Direct fallback for chunks if proxy fails
+          if (!r.ok) {
+             r = await fetch(segmentUrls[currentIdx], { signal });
+             if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          }
+
+          const buf = await r.arrayBuffer();
+          
+          segmentData[currentIdx] = new Uint8Array(buf);
+          completedSegs++;
+          Slots[idx].segDone = completedSegs;
+          Slots[idx].downloaded += buf.byteLength;
+          TotalBytes += buf.byteLength;
+          
+          updateSlotUI(idx);
+        } catch (err) {
+          log(`Slot ${idx + 1}: Chunk ${currentIdx} failed, halting download.`, 'error');
+          throw err;
+        }
+      }
+    };
+
+    Slots[idx].status = 'Downloading segments...';
+    updateSlotUI(idx);
+
+    // Run parallel chunk downloads
+    const workers = Array(Math.min(CONCURRENCY, segmentUrls.length)).fill(null).map(fetchSegment);
+    await Promise.all(workers);
+
+    if (signal.aborted) return;
+
+    Slots[idx].status = 'Compiling file...';
+    updateSlotUI(idx);
+
+    // Merge chunks into one file
+    const totalLength = segmentData.reduce((acc, val) => acc + (val ? val.length : 0), 0);
+    const merged = new Uint8Array(totalLength);
+    let offset = 0;
+    for (let arr of segmentData) {
+      if (arr) {
+        merged.set(arr, offset);
+        offset += arr.length;
       }
     }
-  };
 
-  Slots[idx].status = 'Downloading segments...';
-  updateSlotUI(idx);
-
-  const workers = Array(Math.min(CONCURRENCY, segmentUrls.length)).fill(null).map(fetchSegment);
-  await Promise.all(workers);
-
-  if (signal.aborted) return;
-
-  Slots[idx].status = 'Compiling file...';
-  updateSlotUI(idx);
-
-  // Buffer Concatenation
-  const totalLength = segmentData.reduce((acc, val) => acc + val.length, 0);
-  const merged = new Uint8Array(totalLength);
-  let offset = 0;
-  for (let arr of segmentData) {
-    if (arr) {
-      merged.set(arr, offset);
-      offset += arr.length;
+    const blob = new Blob([merged], { type: 'video/mp2t' });
+    
+    DoneCount++;
+    Done.push({ title: filename, size: merged.length, blob, filename });
+    
+    Slots[idx].status = 'Finished';
+    document.getElementById(`status-${idx}`).style.color = 'var(--success)';
+    updateSlotUI(idx);
+    
+    if (UI.autoSave.checked) {
+      triggerBrowserDownload(blob, filename);
     }
+    
+    log(`Slot ${idx + 1}: Completed ${filename} (${fmtBytes(merged.length)})`, 'success');
   }
-
-  // Create standard Media Blob
-  const blob = new Blob([merged], { type: 'video/mp2t' });
-  
-  DoneCount++;
-  Done.push({ title: filename, size: merged.length, blob, filename });
-  renderDone();
-  
-  if (AUTO_SAVE) {
-    triggerBrowserDownload(blob, filename);
-  }
-  
-  log(`Completed: ${filename} (${fmtBytes(merged.length)})`, 'ok');
-}
 </script>
+
 </body>
 </html>
