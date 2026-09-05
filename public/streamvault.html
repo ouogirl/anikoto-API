@@ -1316,24 +1316,93 @@ function audioMatches(sourceType, wantAudio) {
   return normAudio(sourceType) === normAudio(wantAudio);
 }
 
+/** Stable id for an m3u8 so we can spot the same file under many labels. */
+function streamFingerprint(m3u8) {
+  try {
+    const u = new URL(unwrapProxyUrl(m3u8));
+    // /anime/<hash>/<hash>/master.m3u8 or /agxxxx/master.m3u8
+    return (u.pathname || '').replace(/\/+$/, '').toLowerCase();
+  } catch (_) {
+    return String(m3u8 || '');
+  }
+}
+
+/**
+ * VidPlay often returns the SAME m3u8 for sub + hsub + dub (mislabeled).
+ * If one fingerprint appears under conflicting audio types, those labels are untrusted.
+ */
+function markUntrustedLabels(sources) {
+  const byFp = new Map();
+  for (const s of sources) {
+    if (!s.m3u8) continue;
+    const fp = streamFingerprint(s.m3u8);
+    if (!byFp.has(fp)) byFp.set(fp, new Set());
+    byFp.get(fp).add(normAudio(s.type) || s.type || '?');
+  }
+  const untrustedFp = new Set();
+  for (const [fp, types] of byFp) {
+    const t = [...types];
+    // same file claimed as both dub and sub/hsub → cannot trust type label
+    if (t.includes('dub') && (t.includes('sub') || t.length > 1 && t.some(x => x !== 'dub'))) {
+      untrustedFp.add(fp);
+    }
+  }
+  for (const s of sources) {
+    if (!s.m3u8) continue;
+    const fp = streamFingerprint(s.m3u8);
+    s._fp = fp;
+    s._labelUntrusted = untrustedFp.has(fp);
+  }
+  return untrustedFp.size;
+}
+
 function rankSources(sources, wantAudio, { strict = true } = {}) {
+  const want = normAudio(wantAudio);
   const withM3u8 = sources.filter(s => s.m3u8);
-  const want = withM3u8.filter(s => audioMatches(s.type, wantAudio));
-  const other = withM3u8.filter(s => !audioMatches(s.type, wantAudio));
-  // Strict: only requested track. Non-strict: requested first, then others.
-  const pool = strict ? want : (want.length ? want.concat(other) : other);
+
+  // For strict DUB/SUB: drop streams whose type label conflicts across servers
+  // (e.g. VidPlay same URL as sub+dub). Keep them only as last-resort non-strict.
+  let trusted = withM3u8.filter(s => audioMatches(s.type, want) && !s._labelUntrusted);
+  let untrustedWant = withM3u8.filter(s => audioMatches(s.type, want) && s._labelUntrusted);
+  let other = withM3u8.filter(s => !audioMatches(s.type, want));
+
+  // If strict and we have zero trusted, we still do NOT use untrusted as "dub"
+  // unless non-strict fallback — user would get Japanese audio labeled dub.
+  let pool;
+  if (strict) {
+    pool = trusted.length ? trusted : [];
+  } else {
+    // fallback: other audio types first if we need anything; untrusted last
+    pool = (trusted.length ? trusted : []).concat(other).concat(untrustedWant);
+  }
+
   const score = s => {
     let n = 0;
     const name = s.server || '';
-    if (/VidPlay/i.test(name)) n += 100;
-    if (/Kiwi/i.test(name)) n += 80;
-    if (/Vidstream/i.test(name)) n += 40;
-    if (/^HD-?1/i.test(name)) n -= 30;
-    if (audioMatches(s.type, wantAudio)) n += 50;
-    else n -= 100; // never prefer wrong track when mixed
+    // Prefer servers that actually separate sub/dub files (HD-1 / Vidstream on kryntal)
+    if (/^HD-?1/i.test(name)) n += 120;
+    if (/Vidstream/i.test(name)) n += 100;
+    if (/Kiwi/i.test(name)) n += 70;
+    // VidPlay is often mislabeled — only useful if label is trusted
+    if (/VidPlay/i.test(name)) n += s._labelUntrusted ? -80 : 20;
+    try {
+      const host = new URL(unwrapProxyUrl(s.m3u8)).hostname;
+      if (/mewstream|kryntal/i.test(host)) n += 40;
+      if (/akirax|vidtube/i.test(host)) n -= 30;
+    } catch (_) {}
+    if (audioMatches(s.type, want)) n += 30;
+    else n -= 120;
+    if (s._labelUntrusted) n -= 200;
     return n;
   };
-  return pool.slice().sort((a, b) => score(b) - score(a));
+
+  // De-dupe by fingerprint keeping best score (one try per real stream file)
+  const bestByFp = new Map();
+  for (const s of pool.slice().sort((a, b) => score(b) - score(a))) {
+    const fp = s._fp || streamFingerprint(s.m3u8);
+    if (!bestByFp.has(fp)) bestByFp.set(fp, s);
+  }
+  return [...bestByFp.values()].sort((a, b) => score(b) - score(a));
 }
 
 function expandSourcePaths(ordered) {
@@ -1341,7 +1410,7 @@ function expandSourcePaths(ordered) {
   const seen = new Set();
   for (const src of ordered) {
     for (const [i, m] of buildUrlCandidates(src.m3u8).entries()) {
-      const key = normAudio(src.type) + '|' + m;
+      const key = (src._fp || streamFingerprint(m)) + '|' + m;
       if (seen.has(key)) continue;
       seen.add(key);
       let tag = '';
@@ -1425,36 +1494,49 @@ async function downloadAnime(idx, item, signal) {
     s.type = normAudio(s.type) || s.type;
   }
 
+  const badLabels = markUntrustedLabels(sources);
+  if (badLabels) {
+    log(`Slot ${idx + 1}: ${badLabels} stream(s) have conflicting SUB/DUB labels (e.g. VidPlay) — ignored for ${audio.toUpperCase()}`, 'warn');
+  }
+
   const allTypes = [...new Set(sources.filter(s => s.m3u8).map(s => s.type || '?'))];
-  const summary = sources.filter(s => s.m3u8).map(s => `${s.server}(${s.type})`).join(', ')
+  const summary = sources.filter(s => s.m3u8).map(s => {
+    const flag = s._labelUntrusted ? '~' : '';
+    return `${flag}${s.server}(${s.type})`;
+  }).join(', ')
     || sources.map(s => `${s.server}(${s.type||'?'}·no-m3u8)`).join(', ');
   log(`Slot ${idx + 1}: sources ${summary || '(none)'}`, 'api');
 
-  // 1) Strict: only requested audio track
+  // 1) Strict trusted only: real separate DUB/SUB files (HD-1 / Vidstream)
   let ordered = rankSources(sources, audio, { strict: true });
   if (ordered.length) {
+    log(`Slot ${idx + 1}: try order → ${ordered.map(s => s.server + '(' + s.type + ')').join(' → ')}`, 'dl');
     const expanded = expandSourcePaths(ordered);
-    log(`Slot ${idx + 1}: ${expanded.length} ${audio.toUpperCase()} paths · 1080p preferred`, 'dl');
+    log(`Slot ${idx + 1}: ${expanded.length} trusted ${audio.toUpperCase()} path(s) · 1080p preferred`, 'dl');
     try {
       const got = await trySourceList(idx, expanded, slug, ep, signal);
       if (got !== audio) log(`Slot ${idx + 1}: note — file tagged ${got.toUpperCase()}`, 'warn');
       return;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
-      log(`Slot ${idx + 1}: all ${audio.toUpperCase()} paths failed · ${e.message}`, 'warn');
+      log(`Slot ${idx + 1}: trusted ${audio.toUpperCase()} paths failed · ${e.message}`, 'warn');
     }
   } else {
-    log(`Slot ${idx + 1}: no ${audio.toUpperCase()} m3u8 (have: ${allTypes.join(', ') || 'none'})`, 'warn');
+    log(`Slot ${idx + 1}: no trusted ${audio.toUpperCase()} m3u8 (have: ${allTypes.join(', ') || 'none'})`, 'warn');
   }
 
-  // 2) Optional fallback to other track — only if user didn't forbid it, and only after strict fail
-  // Default: allow fallback but make it very obvious in UI + filename
-  const fallback = rankSources(sources, audio, { strict: false }).filter(s => !audioMatches(s.type, audio));
+  // 2) Do NOT fall back to mislabeled "dub" (VidPlay) — that is usually Japanese/SUB
+  // Only fall back to clearly other-type streams if user still wants something
+  const fallback = rankSources(sources, audio, { strict: false })
+    .filter(s => !audioMatches(s.type, audio) && !s._labelUntrusted);
   if (!fallback.length) {
-    throw new Error(`No playable ${audio.toUpperCase()} sources` + (allTypes.length ? ` (API had: ${allTypes.join(', ')})` : ' (API returned no m3u8)'));
+    throw new Error(
+      `No playable ${audio.toUpperCase()} sources` +
+      (allTypes.length ? ` (API had: ${allTypes.join(', ')}; mislabeled streams skipped)` : ' (API returned no m3u8)')
+    );
   }
 
-  log(`Slot ${idx + 1}: falling back to other audio (${fallback.map(s => s.type).filter((v,i,a)=>a.indexOf(v)===i).join('/')}) — DUB was requested but unavailable/failed`, 'warn');
+  log(`Slot ${idx + 1}: falling back to other audio (${[...new Set(fallback.map(s => s.type))].join('/')}) — wanted ${audio.toUpperCase()}`, 'warn');
   toast(`${audio.toUpperCase()} failed — trying other track`, false);
   const expandedFb = expandSourcePaths(fallback);
   const got = await trySourceList(idx, expandedFb, slug, ep, signal);
