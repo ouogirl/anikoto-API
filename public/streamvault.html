@@ -3,298 +3,438 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StreamVault v6.4</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<title>StreamVault</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>↓</text></svg>">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-:root{--bg:#07070f;--card:rgba(13,13,25,.75);--border:rgba(255,255,255,.06);--glow:rgba(139,92,246,.15)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:#c8cfd8;min-height:100vh}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(99,102,241,.08),transparent 70%),
-             radial-gradient(ellipse 60% 40% at 80% 110%,rgba(168,85,247,.05),transparent 60%)}
-
-.card{background:var(--card);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:16px}
-.card-glow{box-shadow:0 0 0 1px rgba(139,92,246,.1),0 8px 40px -12px rgba(0,0,0,.5)}
-.grad{background:linear-gradient(135deg,#818cf8,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-
-.pbar{height:5px;border-radius:99px;background:rgba(255,255,255,.04);overflow:hidden;position:relative}
-.pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);transition:width .25s ease;position:relative}
-.pfill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,rgba(255,255,255,.2));animation:shimmer 2s ease-in-out infinite}
-@keyframes shimmer{0%,100%{opacity:0}50%{opacity:1}}
-
-.tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-.tag-sub{background:rgba(99,102,241,.12);color:#93a5fc;border:1px solid rgba(99,102,241,.2)}
-.tag-dub{background:rgba(249,115,22,.12);color:#fbbf6a;border:1px solid rgba(249,115,22,.2)}
-.tag-ok{background:rgba(52,211,153,.1);color:#6ee7b7;border:1px solid rgba(52,211,153,.2)}
-.tag-src{background:rgba(139,92,246,.1);color:#c4b5fd;border:1px solid rgba(139,92,246,.15)}
-.tag-warn{background:rgba(245,158,11,.12);color:#fbbf24;border:1px solid rgba(245,158,11,.2)}
-
-.slot-active{border-color:rgba(139,92,246,.3)!important;box-shadow:0 0 30px -5px rgba(139,92,246,.12)}
-.dot-pulse{animation:dotpulse 2s ease-in-out infinite}
-@keyframes dotpulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
-
-.mono{font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.6}
-#logBox{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,.2) transparent}
-#logBox::-webkit-scrollbar{width:3px}
-#logBox::-webkit-scrollbar-thumb{background:rgba(139,92,246,.25);border-radius:9px}
-
-.btn{font-weight:600;border-radius:11px;border:none;cursor:pointer;transition:all .2s;font-size:13px;display:inline-flex;align-items:center;gap:6px}
-.btn-dl{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:11px 18px;box-shadow:0 4px 14px -4px rgba(99,102,241,.35)}
-.btn-dl:hover{box-shadow:0 6px 24px -4px rgba(99,102,241,.5);transform:translateY(-1px)}
-.btn-all{background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:11px 14px;box-shadow:0 4px 14px -4px rgba(16,185,129,.3)}
-.btn-all:hover{box-shadow:0 6px 24px -4px rgba(16,185,129,.45);transform:translateY(-1px)}
-.btn-s{background:rgba(255,255,255,.04);color:#8892a4;padding:5px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
-.btn-s:hover{background:rgba(255,255,255,.08);color:#c8cfd8;border-color:rgba(255,255,255,.12)}
-
-input[type="url"],input[type="text"],input[type="number"],select{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px 16px;color:#dde2ea;font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s,box-shadow .2s}
-input:focus,select:focus{border-color:rgba(139,92,246,.4);box-shadow:0 0 0 3px rgba(139,92,246,.08)}
-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);z-index:100;display:none;align-items:center;justify-content:center}
-.modal.show{display:flex}
-.mbox{background:#0d0d1a;border:1px solid rgba(255,255,255,.08);border-radius:20px;max-width:520px;width:92%;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
-
-.spin{width:12px;height:12px;border:2px solid rgba(139,92,246,.2);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.anim{animation:fadeUp .25s ease-out}
-.toast{position:fixed;bottom:24px;right:24px;z-index:200;animation:fadeUp .25s ease-out}
-.sec-head{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#5a6170;display:flex;align-items:center;gap:6px}
+  :root {
+    --bg: #f4f1ea;
+    --bg2: #ebe6dc;
+    --panel: #fffdf8;
+    --ink: #1c1917;
+    --muted: #6b6560;
+    --line: #d9d2c5;
+    --accent: #1f4e79;
+    --accent2: #163a5c;
+    --ok: #2f6b3a;
+    --warn: #9a6b12;
+    --bad: #a33b2b;
+    --chip: #eef3f8;
+    --shadow: 0 1px 2px rgba(28,25,23,.06), 0 8px 24px rgba(28,25,23,.06);
+    --radius: 10px;
+    --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161513;
+      --bg2: #1e1c19;
+      --panel: #221f1b;
+      --ink: #f3eee6;
+      --muted: #a39b90;
+      --line: #3a352e;
+      --accent: #7eb0e0;
+      --accent2: #5f93c4;
+      --ok: #7dca8c;
+      --warn: #e0b35a;
+      --bad: #e07a6c;
+      --chip: #2a333c;
+      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 10px 28px rgba(0,0,0,.28);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(31,78,121,.08), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.45;
+  }
+  a { color: var(--accent); }
+  .wrap { width: min(980px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 48px; }
+  header {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    margin-bottom: 18px;
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .brand p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .status {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 0.85rem; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 11px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #b0a89c; }
+  .dot.ok { background: var(--ok); }
+  .dot.bad { background: var(--bad); }
+  .dot.warn { background: var(--warn); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat b {
+    display: block;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat span { color: var(--muted); font-size: 0.78rem; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1 1 220px; min-width: 0; }
+  input[type="url"], input[type="text"], input[type="number"], select {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31,78,121,.12); }
+  select { width: auto; min-width: 76px; }
+  button, .btn {
+    font: inherit;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    padding: 9px 13px;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(0.98); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); filter: none; }
+  .btn-good {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-ghost { background: transparent; }
+  .btn-tiny { padding: 4px 9px; font-size: 0.8rem; }
+  .hint { margin-top: 8px; color: var(--muted); font-size: 0.85rem; min-height: 1.2em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) {
+    .stats, .grid2 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+  .slot h3 {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .slot .title { font-weight: 650; margin: 2px 0; }
+  .slot .sub { color: var(--muted); font-size: 0.85rem; }
+  .idle {
+    color: var(--muted);
+    text-align: center;
+    padding: 28px 8px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    background: var(--chip);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 8px;
+  }
+  .bar {
+    height: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .bar > i {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), #3f7cac);
+    transition: width .2s ease;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .list {
+    max-height: 150px;
+    overflow: auto;
+    font-size: 0.88rem;
+  }
+  .list-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .list-item:last-child { border-bottom: 0; }
+  .log {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.55;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--muted);
+    white-space: pre-wrap;
+  }
+  .log .ok { color: var(--ok); }
+  .log .err { color: var(--bad); }
+  .log .warn { color: var(--warn); }
+  .log .api { color: var(--accent); }
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(20,18,16,.45);
+    display: none; align-items: center; justify-content: center;
+    padding: 16px; z-index: 40;
+  }
+  .modal.open { display: flex; }
+  .modal-card {
+    width: min(460px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    max-height: 90vh;
+    overflow: auto;
+  }
+  .modal-card h2 { margin: 0 0 12px; font-size: 1.1rem; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; }
+  .field small { display: block; color: var(--muted); margin-top: 4px; font-size: 0.75rem; }
+  .switch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .banner {
+    background: #fff7df;
+    border: 1px solid #e6d39a;
+    color: #6d5410;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    .banner { background: #3a3118; border-color: #6b5a28; color: #e8d39a; }
+  }
+  .toast {
+    position: fixed; right: 16px; bottom: 16px; z-index: 50;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: var(--shadow);
+    padding: 10px 12px; font-size: 0.9rem;
+  }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-
-<div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-500/[.03] rounded-full blur-[120px] pointer-events-none"></div>
-<div class="fixed bottom-0 right-1/4 w-80 h-80 bg-violet-500/[.03] rounded-full blur-[100px] pointer-events-none"></div>
-
-<div class="relative z-10 max-w-5xl mx-auto px-4 py-6 space-y-4">
-
-<header class="flex items-center justify-between">
-  <div class="flex items-center gap-3.5">
-    <div class="w-10 h-10 rounded-[13px] bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-      <svg class="w-[18px] h-[18px] text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>StreamVault</h1>
+      <p>Anime episode downloader · highest quality · local MP4</p>
     </div>
-    <div>
-      <h1 class="text-[17px] font-bold grad tracking-tight">StreamVault</h1>
-      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.4 — CDN Mirror Bypass</p>
+    <div class="top-actions">
+      <div class="status" id="apiSt"><span class="dot" id="apiDot"></span><span id="apiTxt">Checking…</span></div>
+      <button class="btn-ghost" type="button" onclick="openSettings()">Settings</button>
     </div>
+  </header>
+
+  <div id="setupBanner" class="banner hidden">
+    Open this from your Render/Vercel site, or set the API URL in Settings.
+    <button class="btn-tiny" style="margin-left:8px" onclick="this.parentElement.classList.add('hidden')">Dismiss</button>
   </div>
-  <div class="flex items-center gap-3">
-    <div id="apiSt" class="flex items-center gap-1.5 text-[10px] text-slate-500"><span class="spin"></span><span>Testing</span></div>
-    <button onclick="document.getElementById('cfgModal').classList.add('show')" class="btn-s">
-      <svg class="w-3.5 h-3.5 inline -mt-px mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
-      Settings
-    </button>
+
+  <div class="panel stats">
+    <div class="stat"><b id="sA">0/2</b><span>Active slots</span></div>
+    <div class="stat"><b id="sS">—</b><span>Speed</span></div>
+    <div class="stat"><b id="sD">0</b><span>Done</span></div>
+    <div class="stat"><b id="sB">0 B</b><span>Downloaded</span></div>
   </div>
-</header>
 
-<div id="setupBanner" class="hidden card p-4 border-yellow-500/20 bg-yellow-500/[.04]">
-  <p class="text-xs text-yellow-300/80"><strong>📋 Setup:</strong> Host as <code class="text-yellow-200/70 bg-yellow-500/10 px-1 rounded">public/streamvault.html</code> on your Render/Vercel API, or set API Base URL in Settings.</p>
-  <button onclick="this.parentElement.classList.add('hidden')" class="text-[10px] text-yellow-500/50 hover:text-yellow-300 mt-1">Dismiss</button>
-</div>
-
-<div class="card card-glow px-5 py-3.5 grid grid-cols-4 gap-4">
-  <div class="text-center"><div class="text-[22px] font-bold text-indigo-400 tabular-nums" id="sA">0<span class="text-slate-600 text-sm">/2</span></div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Slots</div></div>
-  <div class="text-center"><div class="text-[22px] font-bold text-cyan-400 tabular-nums" id="sS">—</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Speed</div></div>
-  <div class="text-center"><div class="text-[22px] font-bold text-emerald-400 tabular-nums" id="sD">0</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Done</div></div>
-  <div class="text-center"><div class="text-[22px] font-bold text-violet-400 tabular-nums" id="sB">0 B</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Total</div></div>
-</div>
-
-<div class="card card-glow p-4">
-  <div class="flex gap-2.5 items-center">
-    <div class="relative" style="flex:1 1 0;min-width:0">
-      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-      <input type="url" id="urlIn" placeholder="Paste Anikoto or HiAnime URL..." oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()" style="padding-left:40px;padding-right:90px">
-      <div id="urlBadge" class="absolute right-3 top-1/2 -translate-y-1/2 hidden"></div>
-    </div>
-    <select id="audSel" style="width:62px;flex:0 0 62px;padding:12px 6px;font-size:11px;text-align:center;font-weight:600"><option value="sub">SUB</option><option value="dub">DUB</option></select>
-    <button onclick="go()" class="btn btn-dl whitespace-nowrap">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-      Ep
-    </button>
-    <button onclick="goAll()" class="btn btn-all whitespace-nowrap">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-      All
-    </button>
-  </div>
-  <div id="urlHint" class="text-[11px] mt-2 pl-1 hidden"></div>
-</div>
-
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-  <div class="card p-5 slot" id="sl0">
-    <div class="flex justify-between items-center mb-3">
-      <div class="flex items-center gap-2">
-        <div class="w-2.5 h-2.5 rounded-full bg-slate-700" id="d0"></div>
-        <span class="sec-head">Slot 1</span>
+  <div class="panel">
+    <div class="row">
+      <div class="grow">
+        <input id="urlIn" type="url" placeholder="Paste Anikoto / HiAnime URL" oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()">
       </div>
-      <button class="text-slate-700 hover:text-red-400 transition-colors hidden" id="x0" onclick="cancel(0)">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
+      <select id="audSel"><option value="sub">SUB</option><option value="dub">DUB</option></select>
+      <button class="btn-primary" type="button" onclick="go()">Download ep</button>
+      <button class="btn-good" type="button" onclick="goAll()">All eps</button>
     </div>
-    <div id="e0" class="flex flex-col items-center justify-center py-6 text-slate-700">
-      <svg class="w-7 h-7 mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
-      <span class="text-xs">Waiting for download</span>
+    <div class="hint" id="urlHint">Tip: pick DUB/SUB first. Downloads stay 1080p when available.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel slot" id="sl0">
+      <h3>
+        <span>Slot 1 <span class="dot" id="d0" style="display:inline-block;margin-left:6px"></span></span>
+        <button class="btn-tiny hidden" id="x0" type="button" onclick="cancel(0)">Cancel</button>
+      </h3>
+      <div id="e0" class="idle">Waiting</div>
+      <div id="a0" class="hidden">
+        <div class="title" id="t0">—</div>
+        <div class="sub" id="u0">—</div>
+        <div class="chips" id="bg0"></div>
+        <div class="bar"><i id="p0"></i></div>
+        <div class="meta">
+          <span id="pc0">0%</span>
+          <span id="sz0">—</span>
+          <span id="sp0">—</span>
+          <span id="et0">—</span>
+        </div>
+        <div class="sub" id="st0" style="margin-top:6px">…</div>
+      </div>
     </div>
-    <div id="a0" class="hidden space-y-2.5">
-      <div>
-        <div class="text-[13px] font-semibold text-white/90 truncate" id="t0">—</div>
-        <div class="text-[11px] text-slate-500 mt-0.5" id="u0">—</div>
+    <div class="panel slot" id="sl1">
+      <h3>
+        <span>Slot 2 <span class="dot" id="d1" style="display:inline-block;margin-left:6px"></span></span>
+        <button class="btn-tiny hidden" id="x1" type="button" onclick="cancel(1)">Cancel</button>
+      </h3>
+      <div id="e1" class="idle">Waiting</div>
+      <div id="a1" class="hidden">
+        <div class="title" id="t1">—</div>
+        <div class="sub" id="u1">—</div>
+        <div class="chips" id="bg1"></div>
+        <div class="bar"><i id="p1"></i></div>
+        <div class="meta">
+          <span id="pc1">0%</span>
+          <span id="sz1">—</span>
+          <span id="sp1">—</span>
+          <span id="et1">—</span>
+        </div>
+        <div class="sub" id="st1" style="margin-top:6px">…</div>
       </div>
-      <div class="flex gap-1.5" id="bg0"></div>
-      <div class="pbar"><div class="pfill" id="p0" style="width:0%"></div></div>
-      <div class="grid grid-cols-4 gap-1 text-[10px] text-slate-500 tabular-nums">
-        <span id="pc0">0%</span>
-        <span id="sz0">—</span>
-        <span class="text-right" id="sp0">—</span>
-        <span class="text-right" id="et0">—</span>
-      </div>
-      <div class="text-[10px] text-violet-400/60" id="st0">...</div>
     </div>
   </div>
-  <div class="card p-5 slot" id="sl1">
-    <div class="flex justify-between items-center mb-3">
-      <div class="flex items-center gap-2">
-        <div class="w-2.5 h-2.5 rounded-full bg-slate-700" id="d1"></div>
-        <span class="sec-head">Slot 2</span>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <strong>Queue <span id="qCount" style="color:var(--muted);font-weight:500">0</span></strong>
+        <button class="btn-tiny" type="button" onclick="Q=[];renderQ()">Clear</button>
       </div>
-      <button class="text-slate-700 hover:text-red-400 transition-colors hidden" id="x1" onclick="cancel(1)">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
+      <div class="list" id="qEl"><div class="idle" style="padding:14px">Empty</div></div>
     </div>
-    <div id="e1" class="flex flex-col items-center justify-center py-6 text-slate-700">
-      <svg class="w-7 h-7 mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
-      <span class="text-xs">Waiting for download</span>
-    </div>
-    <div id="a1" class="hidden space-y-2.5">
-      <div>
-        <div class="text-[13px] font-semibold text-white/90 truncate" id="t1">—</div>
-        <div class="text-[11px] text-slate-500 mt-0.5" id="u1">—</div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <strong>Completed</strong>
+        <button class="btn-tiny" type="button" onclick="Done=[];renderDone()">Clear</button>
       </div>
-      <div class="flex gap-1.5" id="bg1"></div>
-      <div class="pbar"><div class="pfill" id="p1" style="width:0%"></div></div>
-      <div class="grid grid-cols-4 gap-1 text-[10px] text-slate-500 tabular-nums">
-        <span id="pc1">0%</span>
-        <span id="sz1">—</span>
-        <span class="text-right" id="sp1">—</span>
-        <span class="text-right" id="et1">—</span>
-      </div>
-      <div class="text-[10px] text-violet-400/60" id="st1">...</div>
+      <div class="list" id="dEl"><div class="idle" style="padding:14px">Empty</div></div>
     </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <strong>Log</strong>
+      <button class="btn-tiny" type="button" onclick="document.getElementById('logBox').innerHTML=''">Clear</button>
+    </div>
+    <div class="log" id="logBox"></div>
   </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-  <div class="card p-4">
-    <div class="flex justify-between items-center mb-3">
-      <span class="sec-head">
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"/></svg>
-        Queue <span class="text-violet-400/50 ml-1" id="qCount">0</span>
-      </span>
-      <button onclick="Q=[];renderQ()" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
+<div class="modal" id="cfgModal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal-card">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2>Settings</h2>
+      <button class="btn-tiny" type="button" onclick="closeSettings()">Close</button>
     </div>
-    <div id="qEl" class="text-xs text-slate-600 text-center py-3 max-h-36 overflow-y-auto">Empty</div>
+    <div class="field">
+      <label>API base URL</label>
+      <input id="cfgApi" type="text" placeholder="https://your-api.onrender.com">
+      <small>Leave blank for same-origin.</small>
+    </div>
+    <div class="field">
+      <label>Cloudflare Worker proxy (optional)</label>
+      <input id="cfgCf" type="text" placeholder="https://your-worker.workers.dev">
+      <small>Only needed if more CDNs start blocking Render.</small>
+    </div>
+    <div class="field">
+      <label>Segment concurrency (2–16)</label>
+      <input id="cfgConc" type="number" min="2" max="16" value="10">
+      <small>Higher = faster. If you see many failures, drop to 6–8.</small>
+    </div>
+    <div class="field">
+      <label>Retries per request</label>
+      <input id="cfgRetries" type="number" min="0" max="8" value="3">
+    </div>
+    <div class="field">
+      <label>Slot stagger (ms)</label>
+      <input id="cfgStagger" type="number" min="0" max="15000" value="800">
+    </div>
+    <div class="field">
+      <label>Failed episode requeues</label>
+      <input id="cfgRequeue" type="number" min="0" max="5" value="2">
+    </div>
+    <div class="field switch-row">
+      <label style="margin:0">Auto-save when finished</label>
+      <input id="cfgAuto" type="checkbox" checked>
+    </div>
+    <button class="btn-primary" style="width:100%" type="button" onclick="saveCfg()">Save</button>
   </div>
-  <div class="card p-4">
-    <div class="flex justify-between items-center mb-3">
-      <span class="sec-head">
-        <svg class="w-3.5 h-3.5 text-emerald-500/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Completed
-      </span>
-      <button onclick="Done=[];renderDone()" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
-    </div>
-    <div id="dEl" class="text-xs text-slate-600 text-center py-3 max-h-36 overflow-y-auto">Empty</div>
-  </div>
-</div>
-
-<div class="card p-4">
-  <div class="flex justify-between items-center mb-3">
-    <span class="sec-head">
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Activity Log
-    </span>
-    <button onclick="document.getElementById('logBox').innerHTML=''" class="btn-s" style="padding:2px 8px;font-size:9px">Clear</button>
-  </div>
-  <div id="logBox" class="mono text-slate-500"></div>
-</div>
-
-</div>
-
-<div class="modal" id="cfgModal">
-<div class="mbox">
-  <div class="flex justify-between items-center mb-5">
-    <h2 class="text-base font-bold grad">Settings</h2>
-    <button onclick="document.getElementById('cfgModal').classList.remove('show')" class="text-slate-600 hover:text-white transition-colors">
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
-  </div>
-  <div class="space-y-4">
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">API Base URL</label>
-      <input type="text" id="cfgApi" placeholder="https://anikoto-api-hte0.onrender.com">
-      <p class="text-[10px] text-slate-600 mt-1.5">Leave blank for same-origin. Your Render/Vercel anikoto-API.</p>
-    </div>
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Cloudflare Worker Proxy (optional)</label>
-      <input type="text" id="cfgCf" placeholder="https://your-worker.workers.dev">
-      <p class="text-[10px] text-slate-600 mt-1.5">Bypasses Render datacenter IP bans. Deploy cloudflare-worker/ from the repo.</p>
-    </div>
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Segment Concurrency (1–12)</label>
-      <input type="number" id="cfgConc" min="1" max="12" value="4">
-      <p class="text-[10px] text-slate-600 mt-1.5">Lower = fewer 429s. Default 4 (was 10 — too aggressive).</p>
-    </div>
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Retries per request</label>
-      <input type="number" id="cfgRetries" min="0" max="10" value="5">
-    </div>
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Slot start stagger (ms)</label>
-      <input type="number" id="cfgStagger" min="0" max="30000" value="2500">
-    </div>
-    <div>
-      <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Failed episode requeues</label>
-      <input type="number" id="cfgRequeue" min="0" max="5" value="2">
-      <p class="text-[10px] text-slate-600 mt-1.5">How many times to re-queue an episode that fails all sources.</p>
-    </div>
-    <div class="flex items-center justify-between p-3 rounded-xl bg-white/[.02] border border-white/[.04]">
-      <label class="text-sm text-slate-300">Auto-download when done</label>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" id="cfgAuto" checked class="sr-only peer">
-        <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-violet-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
-      </label>
-    </div>
-    <button onclick="saveCfg()" class="btn btn-dl w-full justify-center">Save Changes</button>
-  </div>
-</div>
 </div>
 
 <script>
-/* ================================================================
-   StreamVault v6.4 — CDN Mirror Bypass
-   Fixes:
-   1. Unwrap nested /api/proxy URLs (CDN resolved relative paths → 429)
-   2. Always resolve HLS relatives against real CDN base, never proxy path
-   3. Prefer VidPlay over HD-1 (HD-1 often CF-blocks Render IPs)
-   4. Multi-strategy fetch: CF Worker → API proxy → direct → public CORS
-   5. Re-queue failed episodes instead of silently dropping them
-   6. Detect JSON/HTML error bodies as failed responses
-   7. Lower default concurrency + stagger to reduce 429s
-   8. NEW: Auto-mirror blocked CDN hosts (kryntal/cloudbuzz → mewstream)
-      Same path = same 1080p H.264+AAC stream, different edge that allows
-      Render IPs. No third-party "download sites", no random binaries.
-   ================================================================ */
-
+/* StreamVault v6.5 — faster path, same max quality, simpler UI */
 const ORIGIN = window.location.origin;
 const IS_DEPLOYED = /vercel\.app|onrender\.com|localhost|127\.0\.0\.1/.test(ORIGIN);
 let API = IS_DEPLOYED ? '' : 'https://anikoto-api-hte0.onrender.com';
 let CF_WORKER = '';
 let AUTO_SAVE = true;
-let SEG_CONCURRENCY = 4;
-let MAX_RETRIES = 5;
-let SLOT_STAGGER_MS = 2500;
+let SEG_CONCURRENCY = 10;
+let MAX_RETRIES = 3;
+let SLOT_STAGGER_MS = 800;
 let MAX_REQUEUE = 2;
+
+const CDN_MIRROR_HOSTS = ['cdn.mewstream.buzz'];
+const BLOCKED_HOST_RE = /kryntal\.top$|cloudbuzz\.lol$|akirax\.buzz$|vidtube\.site$/i;
 
 const Slots = [null, null];
 const AbortCtrl = [null, null];
@@ -304,11 +444,18 @@ let Failed = [];
 let TotalBytes = 0;
 let DoneCount = 0;
 
+/** Sticky working path discovered at runtime (proxy|cf|direct + optional host). */
+let stickyPath = null; // { mode:'proxy'|'cf'|'direct', host?:string }
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const $ = id => document.getElementById(id);
+
+function openSettings() { $('cfgModal').classList.add('open'); }
+function closeSettings() { $('cfgModal').classList.remove('open'); }
 
 function loadCfg() {
   try {
-    const c = JSON.parse(localStorage.getItem('sv64') || localStorage.getItem('sv63') || localStorage.getItem('sv62') || '{}');
+    const c = JSON.parse(localStorage.getItem('sv65') || localStorage.getItem('sv64') || localStorage.getItem('sv63') || '{}');
     if (c.api !== undefined) API = c.api;
     if (c.cf !== undefined) CF_WORKER = c.cf;
     if (c.auto !== undefined) AUTO_SAVE = c.auto;
@@ -316,40 +463,41 @@ function loadCfg() {
     if (c.retries !== undefined) MAX_RETRIES = c.retries;
     if (c.stagger !== undefined) SLOT_STAGGER_MS = c.stagger;
     if (c.requeue !== undefined) MAX_REQUEUE = c.requeue;
-  } catch (e) {}
-  document.getElementById('cfgApi').value = API || '(same origin)';
-  document.getElementById('cfgCf').value = CF_WORKER || '';
-  document.getElementById('cfgAuto').checked = AUTO_SAVE;
-  document.getElementById('cfgConc').value = SEG_CONCURRENCY;
-  document.getElementById('cfgRetries').value = MAX_RETRIES;
-  document.getElementById('cfgStagger').value = SLOT_STAGGER_MS;
-  document.getElementById('cfgRequeue').value = MAX_REQUEUE;
-  if (window.location.protocol === 'file:') document.getElementById('setupBanner').classList.remove('hidden');
+  } catch (_) {}
+  $('cfgApi').value = API || '';
+  $('cfgCf').value = CF_WORKER || '';
+  $('cfgAuto').checked = AUTO_SAVE;
+  $('cfgConc').value = SEG_CONCURRENCY;
+  $('cfgRetries').value = MAX_RETRIES;
+  $('cfgStagger').value = SLOT_STAGGER_MS;
+  $('cfgRequeue').value = MAX_REQUEUE;
+  if (location.protocol === 'file:') $('setupBanner').classList.remove('hidden');
 }
 
 function saveCfg() {
-  const v = document.getElementById('cfgApi').value.trim();
-  API = (v === '(same origin)' || !v) ? '' : v.replace(/\/$/, '');
-  CF_WORKER = document.getElementById('cfgCf').value.trim().replace(/\/$/, '');
-  AUTO_SAVE = document.getElementById('cfgAuto').checked;
-  SEG_CONCURRENCY = Math.max(1, Math.min(12, parseInt(document.getElementById('cfgConc').value) || 4));
-  MAX_RETRIES = Math.max(0, Math.min(10, parseInt(document.getElementById('cfgRetries').value) || 5));
-  SLOT_STAGGER_MS = Math.max(0, Math.min(30000, parseInt(document.getElementById('cfgStagger').value) || 2500));
-  MAX_REQUEUE = Math.max(0, Math.min(5, parseInt(document.getElementById('cfgRequeue').value) || 2));
-  localStorage.setItem('sv64', JSON.stringify({
+  const v = $('cfgApi').value.trim();
+  API = v ? v.replace(/\/$/, '') : '';
+  CF_WORKER = $('cfgCf').value.trim().replace(/\/$/, '');
+  AUTO_SAVE = $('cfgAuto').checked;
+  SEG_CONCURRENCY = Math.max(2, Math.min(16, parseInt($('cfgConc').value) || 10));
+  MAX_RETRIES = Math.max(0, Math.min(8, parseInt($('cfgRetries').value) || 3));
+  SLOT_STAGGER_MS = Math.max(0, Math.min(15000, parseInt($('cfgStagger').value) || 800));
+  MAX_REQUEUE = Math.max(0, Math.min(5, parseInt($('cfgRequeue').value) || 2));
+  localStorage.setItem('sv65', JSON.stringify({
     api: API, cf: CF_WORKER, auto: AUTO_SAVE,
     conc: SEG_CONCURRENCY, retries: MAX_RETRIES,
     stagger: SLOT_STAGGER_MS, requeue: MAX_REQUEUE
   }));
-  document.getElementById('cfgModal').classList.remove('show');
+  stickyPath = null;
+  closeSettings();
   toast('Settings saved');
   testApi();
 }
 
 function fmtBytes(b) {
   if (!b || b <= 0) return '0 B';
-  const u = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(b) / Math.log(1024));
+  const u = ['B','KB','MB','GB'];
+  const i = Math.min(u.length - 1, Math.floor(Math.log(b) / Math.log(1024)));
   return (b / Math.pow(1024, i)).toFixed(i > 1 ? 2 : 0) + ' ' + u[i];
 }
 function fmtETA(s) {
@@ -363,68 +511,34 @@ function sanitizeFilename(n) {
 }
 
 function log(msg, type = 'info') {
-  const el = document.getElementById('logBox');
-  const colors = {
-    info: 'text-slate-500', ok: 'text-emerald-400', err: 'text-red-400',
-    warn: 'text-amber-400', api: 'text-violet-400', dl: 'text-cyan-400'
-  };
+  const el = $('logBox');
   const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-  const div = document.createElement('div');
-  div.className = 'mono anim';
-  div.innerHTML = `<span class="text-slate-700">${ts}</span> <span class="${colors[type] || colors.info}">${msg}</span>`;
-  el.appendChild(div);
-  while (el.children.length > 300) el.removeChild(el.firstChild);
+  const line = document.createElement('div');
+  line.innerHTML = `<span>${ts}</span> <span class="${type}">${msg}</span>`;
+  el.appendChild(line);
+  while (el.childElementCount > 400) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
 }
 
-function toast(msg, success = true) {
+function toast(msg, ok = true) {
   document.querySelectorAll('.toast').forEach(e => e.remove());
-  const d = document.createElement('div');
-  d.className = 'toast';
-  d.innerHTML = `<div class="card ${success ? 'border-emerald-500/20' : 'border-red-500/20'} px-4 py-3 text-sm shadow-xl">${success ? '✓' : '✕'} ${msg}</div>`;
-  document.body.appendChild(d);
-  setTimeout(() => { if (d.parentNode) d.remove(); }, 3500);
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = (ok ? '✓ ' : '✕ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
 }
 
-/* ---------- URL / Proxy helpers (core fix) ---------- */
-
-/** Peel nested /api/proxy?url=... wrappers until we get the real CDN URL. */
+/* -------- URL helpers -------- */
 function unwrapProxyUrl(raw) {
   if (!raw) return raw;
   let url = String(raw).trim();
-  let guard = 0;
-  while (guard++ < 8) {
+  for (let i = 0; i < 8; i++) {
     try {
-      // Absolute proxy URL: https://host/api/proxy?url=...
-      if (/\/api\/proxy\b/i.test(url) || /[?&]url=https?%3A/i.test(url) || /\?url=/.test(url) && /proxy/i.test(url)) {
-        const abs = url.startsWith('http') ? url : (url.startsWith('/') ? 'https://dummy.local' + url : null);
-        if (abs) {
-          const u = new URL(abs);
-          const nested = u.searchParams.get('url');
-          if (nested) {
-            url = nested;
-            continue;
-          }
-        }
-      }
-      // Relative /api/proxy?url=...
-      if (url.startsWith('/api/proxy')) {
-        const u = new URL(url, 'https://dummy.local');
-        const nested = u.searchParams.get('url');
-        if (nested) {
-          url = nested;
-          continue;
-        }
-      }
-      // Bare path that accidentally became host.com/api/proxy?...
-      const m = url.match(/https?:\/\/[^/]+(\/api\/proxy\?.*)$/i);
-      if (m) {
-        const u = new URL('https://dummy.local' + m[1]);
-        const nested = u.searchParams.get('url');
-        if (nested) {
-          url = nested;
-          continue;
-        }
+      if (/\/api\/proxy\b/i.test(url) || (/\?url=/.test(url) && /proxy/i.test(url))) {
+        const abs = url.startsWith('http') ? url : 'https://x.local' + (url.startsWith('/') ? url : '/' + url);
+        const nested = new URL(abs).searchParams.get('url');
+        if (nested) { url = nested; continue; }
       }
     } catch (_) {}
     break;
@@ -432,331 +546,183 @@ function unwrapProxyUrl(raw) {
   return url;
 }
 
-function isProxyPath(u) {
-  return typeof u === 'string' && (/\/api\/proxy\b/i.test(u) || (CF_WORKER && u.startsWith(CF_WORKER)));
+function isBlockedHost(host) {
+  return !!host && BLOCKED_HOST_RE.test(String(host).toLowerCase());
 }
 
-function extractRefererFromProxy(raw) {
-  try {
-    const abs = raw.startsWith('http') ? raw : 'https://dummy.local' + (raw.startsWith('/') ? raw : '/' + raw);
-    const u = new URL(abs);
-    return u.searchParams.get('referer') || '';
-  } catch (_) {
-    return '';
-  }
+function withHost(url, host) {
+  const u = new URL(unwrapProxyUrl(url));
+  u.hostname = host;
+  u.protocol = 'https:';
+  return u.toString();
 }
 
-/** Build a single-layer proxy URL (never nested). */
-function buildProxyUrl(targetUrl, referer) {
-  const real = unwrapProxyUrl(targetUrl);
-  if (!real || !/^https?:\/\//i.test(real)) return null;
-  const ref = referer || 'https://megaplay.buzz/';
-  if (CF_WORKER) {
-    const base = CF_WORKER.includes('?') ? CF_WORKER : CF_WORKER + '/';
-    const sep = base.includes('?') ? '&' : '?';
-    return `${CF_WORKER.replace(/\/$/, '')}/?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
-  }
-  return `${API}/api/proxy?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
-}
-
-/** Resolve a playlist line to an absolute CDN URL (never leave it as relative proxy). */
-function resolveAgainstBase(line, baseUrl) {
-  const trimmed = (line || '').trim();
-  if (!trimmed) return trimmed;
-  if (isProxyPath(trimmed) || trimmed.includes('/api/proxy')) {
-    return unwrapProxyUrl(trimmed);
-  }
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.startsWith('//')) return 'https:' + trimmed;
-  try {
-    const base = unwrapProxyUrl(baseUrl);
-    return new URL(trimmed, base).toString();
-  } catch (_) {
-    const b = unwrapProxyUrl(baseUrl).replace(/[^/]*$/, '');
-    return b + trimmed.replace(/^\//, '');
-  }
-}
-
-function looksLikeM3u8(text) {
-  if (!text || typeof text !== 'string') return false;
-  const t = text.trim();
-  return t.startsWith('#EXTM3U') || t.includes('#EXT-X-') || t.includes('#EXTINF');
-}
-
-function looksLikeErrorBody(text) {
-  if (!text) return true;
-  const t = text.trim();
-  if (t.startsWith('{') && /"ok"\s*:\s*false/.test(t)) return true;
-  if (t.startsWith('<!DOCTYPE') || t.startsWith('<html')) return true;
-  if (/Website Access Blocked|Just a moment|cf-error|Access Denied/i.test(t)) return true;
-  return false;
-}
-
-/** Hosts known to CF-block Render/datacenter IPs. Same content is often on mewstream. */
-const BLOCKED_CDN_HOST_RE = /(?:^|\.)((?:cdn\.)?kryntal\.top|cloudbuzz\.lol|akirax\.buzz|vidtube\.site)$/i;
-/** Preferred mirror edges that serve the SAME path (1080p H.264 + AAC). */
-const CDN_MIRROR_HOSTS = ['cdn.mewstream.buzz'];
-
-function isBlockedCdnHost(host) {
-  if (!host) return false;
-  const h = String(host).toLowerCase();
-  return BLOCKED_CDN_HOST_RE.test(h) || /kryntal\.top$/i.test(h) || /cloudbuzz\.lol$/i.test(h) || /akirax\.buzz$/i.test(h);
-}
-
-/** Build candidate URLs: original first, then same-path mirrors on alternate CDN hosts. */
 function buildUrlCandidates(url) {
   const real = unwrapProxyUrl(url);
   const out = [];
   const seen = new Set();
-  const push = (u) => {
-    if (!u || seen.has(u)) return;
-    seen.add(u);
-    out.push(u);
-  };
-  push(real);
+  const push = u => { if (u && !seen.has(u)) { seen.add(u); out.push(u); } };
   try {
-    const u = new URL(real);
-    // Always offer mewstream path-mirror (works even when original host is fine — cheap no-op if same)
-    for (const host of CDN_MIRROR_HOSTS) {
-      if (u.hostname.toLowerCase() === host.toLowerCase()) continue;
-      const mirrored = new URL(real);
-      mirrored.hostname = host;
-      mirrored.protocol = 'https:';
-      push(mirrored.toString());
+    const host = new URL(real).hostname;
+    // Prefer sticky working host first
+    if (stickyPath?.host) push(withHost(real, stickyPath.host));
+    for (const h of CDN_MIRROR_HOSTS) push(withHost(real, h));
+    push(real);
+    if (isBlockedHost(host)) {
+      // move original blocked host to end
+      const i = out.indexOf(real);
+      if (i >= 0 && i < out.length - 1) { out.splice(i, 1); out.push(real); }
     }
-    // If original host is a known-blocked edge, put mirrors first
-    if (isBlockedCdnHost(u.hostname) && out.length > 1) {
-      const orig = out.shift();
-      out.push(orig); // try mirrors before original
-    }
-  } catch (_) {}
+  } catch (_) { push(real); }
   return out;
 }
 
-/** Rewrite every absolute URL host inside an m3u8 body onto a working mirror host. */
-function rewritePlaylistHosts(text, fromHosts, toHost) {
-  if (!text || !toHost) return text;
-  let out = text;
-  const hosts = Array.isArray(fromHosts) ? fromHosts : [fromHosts];
-  for (const h of hosts) {
-    if (!h) continue;
-    const re = new RegExp(String(h).replace(/\./g, '\\.'), 'gi');
-    out = out.replace(re, toHost);
-  }
-  // Also catch any remaining blocked CDN hosts generically
-  out = out.replace(/https?:\/\/([a-z0-9.-]*kryntal\.top)/gi, 'https://' + toHost);
-  out = out.replace(/https?:\/\/([a-z0-9.-]*cloudbuzz\.lol)/gi, 'https://' + toHost);
-  out = out.replace(/https?:\/\/([a-z0-9.-]*akirax\.buzz)/gi, 'https://' + toHost);
-  return out;
+function rewritePlaylistHosts(text, toHost) {
+  return text
+    .replace(/https?:\/\/([a-z0-9.-]*kryntal\.top)/gi, 'https://' + toHost)
+    .replace(/https?:\/\/([a-z0-9.-]*cloudbuzz\.lol)/gi, 'https://' + toHost)
+    .replace(/https?:\/\/([a-z0-9.-]*akirax\.buzz)/gi, 'https://' + toHost);
 }
 
-async function readResponseSafe(resp) {
-  const buf = await resp.arrayBuffer();
-  return new Uint8Array(buf);
+function resolveAgainstBase(line, baseUrl) {
+  const t = (line || '').trim();
+  if (!t) return t;
+  if (/\/api\/proxy\b/i.test(t)) return unwrapProxyUrl(t);
+  if (/^https?:\/\//i.test(t)) return t;
+  if (t.startsWith('//')) return 'https:' + t;
+  try { return new URL(t, unwrapProxyUrl(baseUrl)).toString(); }
+  catch (_) { return unwrapProxyUrl(baseUrl).replace(/[^/]*$/, '') + t.replace(/^\//, ''); }
 }
 
-async function responseTextOrThrow(resp, label) {
-  const bytes = await readResponseSafe(resp);
-  const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-  if (!resp.ok || looksLikeErrorBody(text)) {
-    let detail = `HTTP ${resp.status}`;
-    try {
-      const j = JSON.parse(text);
-      if (j.message) detail = j.message;
-      else if (j.error) detail = j.error;
-    } catch (_) {
-      if (looksLikeErrorBody(text) && text.length < 200) detail = text.slice(0, 120);
-    }
-    throw new Error(`${label}: ${detail}`);
-  }
-  return text;
+function looksLikeM3u8(text) {
+  if (!text) return false;
+  const t = text.trim();
+  return t.startsWith('#EXTM3U') || t.includes('#EXT-X-') || t.includes('#EXTINF');
 }
-
-/** Validate segment bytes look like MPEG-TS (0x47) or fMP4, not HTML/JSON error. */
+function looksLikeErrorBody(text) {
+  if (!text) return true;
+  const t = text.trim();
+  return (t.startsWith('{') && /"ok"\s*:\s*false/.test(t))
+    || t.startsWith('<!DOCTYPE') || t.startsWith('<html')
+    || /Website Access Blocked|cf-error|Access Denied/i.test(t);
+}
 function isValidMediaBytes(buf) {
   if (!buf || buf.byteLength < 188) return false;
   const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  if (u8[0] === 0x47) return true; // MPEG-TS sync
-  // fMP4 / ISO BMFF often starts with size+ftyp/moof/sidx
+  if (u8[0] === 0x47) return true;
   if (u8[4] === 0x66 && u8[5] === 0x74 && u8[6] === 0x79 && u8[7] === 0x70) return true;
   if (u8[4] === 0x6d && u8[5] === 0x6f && u8[6] === 0x6f && u8[7] === 0x66) return true;
-  // Reject obvious text
-  const head = new TextDecoder().decode(u8.slice(0, 64)).trim();
-  if (head.startsWith('<') || head.startsWith('{') || /Website Access Blocked/i.test(head)) return false;
-  // Disguised extensions (.jpg/.js/.css) still carry TS — accept if large enough and not HTML
+  const head = new TextDecoder().decode(u8.slice(0, 48)).trim();
+  if (head.startsWith('<') || head.startsWith('{')) return false;
   return u8.byteLength > 1024 && u8[0] !== 0x3c && u8[0] !== 0x7b;
 }
 
-/* ---------- Smart multi-strategy fetch ---------- */
-
-async function tryOneUrl(idx, real, referer, { isSegment = false, signal } = {}) {
+function proxyUrlFor(real, referer) {
   const ref = referer || 'https://megaplay.buzz/';
-  const errors = [];
+  if (CF_WORKER) return `${CF_WORKER.replace(/\/$/, '')}/?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
+  return `${API}/api/proxy?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
+}
 
-  // A: Cloudflare Worker
-  if (CF_WORKER) {
-    try {
-      const u = `${CF_WORKER.replace(/\/$/, '')}/?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
-      const r = await fetch(u, { signal });
-      if (r.ok) {
-        if (!isSegment) {
-          const t = await r.clone().text();
-          if (looksLikeM3u8(t) || !looksLikeErrorBody(t)) {
-            return { resp: new Response(t, { status: 200, headers: r.headers }), via: 'cf-worker', url: real };
-          }
-          throw new Error('CF worker error body');
-        }
-        return { resp: r, via: 'cf-worker', url: real };
-      }
-      errors.push(`CF ${r.status}`);
-    } catch (e) {
-      if (signal?.aborted) throw e;
-      errors.push('CF:' + (e.message || e));
-    }
+/** Fast path: use sticky mode/host when known. */
+async function fetchOnce(real, referer, mode, signal) {
+  if (mode === 'cf' && CF_WORKER) {
+    return fetch(`${CF_WORKER.replace(/\/$/, '')}/?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(referer || 'https://megaplay.buzz/')}`, { signal });
   }
-
-  // B: API /api/proxy
-  try {
-    const u = `${API}/api/proxy?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(ref)}`;
-    const r = await fetch(u, { signal });
-    if (r.ok) {
-      if (!isSegment) {
-        const t = await r.clone().text();
-        if (looksLikeM3u8(t)) return { resp: new Response(t, { status: 200, headers: r.headers }), via: 'api-proxy', url: real };
-        if (looksLikeErrorBody(t)) throw new Error('proxy error body');
-        return { resp: new Response(t, { status: 200, headers: r.headers }), via: 'api-proxy', url: real };
-      }
-      return { resp: r, via: 'api-proxy', url: real };
-    }
-    errors.push(`proxy ${r.status}`);
-  } catch (e) {
-    if (signal?.aborted) throw e;
-    errors.push('proxy:' + (e.message || e));
+  if (mode === 'proxy') {
+    return fetch(`${API}/api/proxy?url=${encodeURIComponent(real)}&referer=${encodeURIComponent(referer || 'https://megaplay.buzz/')}`, { signal });
   }
-
-  // C: Direct browser (home IP)
-  try {
-    const r = await fetch(real, { signal, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
-    if (r.ok) {
-      if (!isSegment) log(`Slot ${idx + 1}: direct CDN OK`, 'ok');
-      return { resp: r, via: 'direct', url: real };
-    }
-    errors.push(`direct ${r.status}`);
-  } catch (e) {
-    if (signal?.aborted) throw e;
-    errors.push('direct-block');
-  }
-
-  // D: Public CORS (manifests only)
-  if (!isSegment) {
-    const mirrors = [
-      `https://corsproxy.io/?${encodeURIComponent(real)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(real)}`
-    ];
-    for (const m of mirrors) {
-      try {
-        const r = await fetch(m, { signal });
-        if (r.ok) {
-          const t = await r.text();
-          if (looksLikeM3u8(t)) {
-            return {
-              resp: new Response(t, { status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' } }),
-              via: 'cors-mirror',
-              url: real
-            };
-          }
-        }
-      } catch (e) {
-        if (signal?.aborted) throw e;
-      }
-    }
-  }
-
-  throw new Error(errors.slice(0, 4).join('; ') || 'fetch failed');
+  return fetch(real, { signal, mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
 }
 
 async function smartFetch(idx, targetUrl, referer, { isSegment = false, signal } = {}) {
   const candidates = buildUrlCandidates(targetUrl);
-  if (!candidates.length) throw new Error('Empty URL');
+  const modes = [];
+  if (stickyPath?.mode) modes.push(stickyPath.mode);
+  if (CF_WORKER) modes.push('cf');
+  modes.push('proxy', 'direct');
+  const uniqModes = [...new Set(modes)];
   const errors = [];
-  let lastHostLog = '';
 
   for (const cand of candidates) {
     let host = '';
-    try { host = new URL(cand).hostname; } catch (_) { host = cand; }
-    try {
-      const result = await tryOneUrl(idx, cand, referer, { isSegment, signal });
-      // For segments, verify media bytes (not HTML error pages)
-      if (isSegment) {
-        const buf = await result.resp.arrayBuffer();
-        if (!isValidMediaBytes(buf)) {
-          errors.push(`${host}: bad media`);
+    try { host = new URL(cand).hostname; } catch (_) {}
+    for (const mode of uniqModes) {
+      if (mode === 'cf' && !CF_WORKER) continue;
+      try {
+        const r = await fetchOnce(cand, referer, mode, signal);
+        if (!r.ok) { errors.push(`${host}/${mode}:${r.status}`); continue; }
+
+        if (isSegment) {
+          const buf = await r.arrayBuffer();
+          if (!isValidMediaBytes(buf)) { errors.push(`${host}/${mode}:bad`); continue; }
+          stickyPath = { mode, host };
+          return new Response(buf, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } });
+        }
+
+        const text = await r.text();
+        if (!looksLikeM3u8(text) || looksLikeErrorBody(text)) {
+          // try public cors only for manifests as last ditch on this candidate
+          errors.push(`${host}/${mode}:body`);
           continue;
         }
-        if (Slots[idx] && host && /mewstream/i.test(host) && !/mewstream/i.test(String(targetUrl))) {
-          if (Slots[idx].via !== 'mirror') {
-            Slots[idx].via = 'mirror';
-            log(`Slot ${idx + 1}: CDN mirror → ${host} (same 1080p stream)`, 'ok');
-          }
+        let out = text;
+        // Always rewrite blocked segment hosts onto preferred mirror
+        const mirrorHost = stickyPath?.host || CDN_MIRROR_HOSTS[0];
+        out = rewritePlaylistHosts(out, mirrorHost);
+        stickyPath = { mode, host: /mewstream/i.test(host) ? host : (isBlockedHost(host) ? mirrorHost : host) };
+        if (Slots[idx] && isBlockedHost((() => { try { return new URL(unwrapProxyUrl(targetUrl)).hostname; } catch (_) { return ''; } })())) {
+          Slots[idx].via = 'mirror';
         }
-        return new Response(buf, { status: 200, headers: { 'Content-Type': 'application/octet-stream' } });
+        return new Response(out, { status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' } });
+      } catch (e) {
+        if (signal?.aborted) throw e;
+        errors.push(`${host}/${mode}:${e.message || e}`);
       }
-      // Manifest success — rewrite blocked hosts inside playlist to working mirror
-      let text = await result.resp.text();
-      if (looksLikeM3u8(text)) {
-        const workingHost = (() => { try { return new URL(result.url).hostname; } catch (_) { return CDN_MIRROR_HOSTS[0]; } })();
-        // If we landed on mewstream OR original was blocked, force playlist URLs onto mewstream
-        if (/mewstream/i.test(workingHost) || isBlockedCdnHost((() => { try { return new URL(unwrapProxyUrl(targetUrl)).hostname; } catch (_) { return ''; } })())) {
-          const before = text;
-          text = rewritePlaylistHosts(text, null, CDN_MIRROR_HOSTS[0]);
-          if (text !== before && Slots[idx]) {
-            Slots[idx].via = 'mirror';
-            if (lastHostLog !== workingHost) {
-              log(`Slot ${idx + 1}: playlist hosts mirrored → ${CDN_MIRROR_HOSTS[0]}`, 'ok');
-              lastHostLog = workingHost;
-            }
-          }
-        }
-        return new Response(text, { status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' } });
-      }
-      if (looksLikeErrorBody(text)) {
-        errors.push(`${host}: error body`);
-        continue;
-      }
-      return new Response(text, { status: 200 });
-    } catch (e) {
-      if (signal?.aborted) throw e;
-      errors.push(`${host}: ${e.message || e}`);
     }
   }
 
-  throw new Error(`All fetch paths failed (${errors.slice(0, 5).join(' | ')})`);
+  // Manifest-only public CORS fallback (slow; rarely needed)
+  if (!isSegment) {
+    for (const cand of candidates) {
+      for (const m of [
+        `https://corsproxy.io/?${encodeURIComponent(cand)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(cand)}`
+      ]) {
+        try {
+          const r = await fetch(m, { signal });
+          if (!r.ok) continue;
+          const t = await r.text();
+          if (looksLikeM3u8(t)) {
+            return new Response(rewritePlaylistHosts(t, CDN_MIRROR_HOSTS[0]), {
+              status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' }
+            });
+          }
+        } catch (e) { if (signal?.aborted) throw e; }
+      }
+    }
+  }
+
+  throw new Error(`All paths failed (${errors.slice(0, 4).join(' | ')})`);
 }
 
 async function fetchWithRetry(url, opts = {}, retries = MAX_RETRIES, label = '') {
-  let attempt = 0;
-  let lastErr;
+  let attempt = 0, lastErr;
   while (attempt <= retries) {
     try {
       const r = await fetch(url, opts);
       if (r.ok) return r;
       if ([403, 429, 500, 502, 503, 504].includes(r.status) && attempt < retries) {
-        const wait = Math.min(10000, 600 * Math.pow(2, attempt)) + Math.floor(Math.random() * 500);
-        if (label) log(`${label}: ${r.status}, retry ${attempt + 1}/${retries} in ${wait}ms`, 'warn');
-        await sleep(wait);
-        attempt++;
-        continue;
+        const wait = Math.min(5000, 350 * Math.pow(2, attempt)) + (Math.random() * 200 | 0);
+        if (label) log(`${label}: ${r.status}, retry ${attempt + 1}/${retries}`, 'warn');
+        await sleep(wait); attempt++; continue;
       }
-      throw new Error(`HTTP ${r.status}`);
+      throw new Error('HTTP ' + r.status);
     } catch (e) {
       lastErr = e;
       if (opts.signal?.aborted) throw e;
       if (attempt < retries) {
-        const wait = Math.min(8000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 400);
-        if (label) log(`${label}: ${e.message}, retry ${attempt + 1}/${retries} in ${wait}ms`, 'warn');
-        await sleep(wait);
-        attempt++;
-        continue;
+        await sleep(Math.min(4000, 300 * Math.pow(2, attempt)));
+        attempt++; continue;
       }
       throw e;
     }
@@ -764,8 +730,7 @@ async function fetchWithRetry(url, opts = {}, retries = MAX_RETRIES, label = '')
   throw lastErr || new Error('fetch failed');
 }
 
-/* ---------- UI helpers ---------- */
-
+/* -------- UI -------- */
 function parseUrl(url) {
   let m = url.match(/(?:anikoto|anikototv)\.\w+\/watch\/([a-z0-9][a-z0-9-]*[a-z0-9])(?:\/ep-(\d+))?/i);
   if (m) return { slug: m[1], ep: m[2] ? +m[2] : 1, platform: 'anikoto' };
@@ -778,53 +743,43 @@ function parseUrl(url) {
 }
 
 function detectUrl() {
-  const url = document.getElementById('urlIn').value.trim();
-  const badge = document.getElementById('urlBadge'), hint = document.getElementById('urlHint');
-  if (!url) { badge.classList.add('hidden'); hint.classList.add('hidden'); return; }
+  const url = $('urlIn').value.trim();
+  const hint = $('urlHint');
+  if (!url) { hint.textContent = 'Tip: pick DUB/SUB first. Downloads stay 1080p when available.'; return; }
   const p = parseUrl(url);
-  if (p) {
-    badge.innerHTML = `<span class="tag tag-ok">${p.platform}</span>`;
-    hint.innerHTML = `<span class="text-emerald-400/80">✓ Episode ${p.ep} detected</span>`;
-  } else {
-    badge.innerHTML = '<span class="tag tag-ok">URL</span>';
-    hint.innerHTML = '<span class="text-slate-500">Direct URL</span>';
-  }
-  badge.classList.remove('hidden');
-  hint.classList.remove('hidden');
+  hint.textContent = p ? `Detected ${p.platform} · episode ${p.ep}` : 'Direct URL mode';
 }
 
 function updateStats() {
   const active = Slots.filter(Boolean).length;
-  document.getElementById('sA').innerHTML = active + '<span class="text-slate-600 text-sm">/2</span>';
-  document.getElementById('sD').textContent = DoneCount;
-  document.getElementById('sB').textContent = fmtBytes(TotalBytes);
-  let spd = 0;
-  Slots.forEach(s => { if (s) spd += (s.speed || 0); });
-  document.getElementById('sS').textContent = spd > 0 ? fmtBytes(spd) + '/s' : '—';
+  $('sA').textContent = active + '/2';
+  $('sD').textContent = DoneCount;
+  $('sB').textContent = fmtBytes(TotalBytes);
+  let spd = 0; Slots.forEach(s => { if (s) spd += (s.speed || 0); });
+  $('sS').textContent = spd > 0 ? fmtBytes(spd) + '/s' : '—';
 }
 
 function updateSlotUI(idx) {
-  const s = Slots[idx], $ = id => document.getElementById(id);
+  const s = Slots[idx];
   if (!s) {
     $('e' + idx).classList.remove('hidden');
     $('a' + idx).classList.add('hidden');
     $('x' + idx).classList.add('hidden');
-    $('d' + idx).className = 'w-2.5 h-2.5 rounded-full bg-slate-700';
-    $('sl' + idx).classList.remove('slot-active');
+    $('d' + idx).className = 'dot';
     return;
   }
   $('e' + idx).classList.add('hidden');
   $('a' + idx).classList.remove('hidden');
   $('x' + idx).classList.remove('hidden');
-  $('d' + idx).className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 dot-pulse';
-  $('sl' + idx).classList.add('slot-active');
+  $('d' + idx).className = 'dot ok';
   $('t' + idx).textContent = s.title || '—';
   $('u' + idx).textContent = s.subtitle || '';
-  let badges = '';
-  if (s.audioType) badges += `<span class="tag tag-${s.audioType}">${s.audioType}</span>`;
-  if (s.serverName) badges += `<span class="tag tag-src">${s.serverName}</span>`;
-  if (s.via) badges += `<span class="tag tag-warn">${s.via}</span>`;
-  $('bg' + idx).innerHTML = badges;
+  let chips = '';
+  if (s.audioType) chips += `<span class="chip">${s.audioType}</span>`;
+  if (s.serverName) chips += `<span class="chip">${s.serverName}</span>`;
+  if (s.via) chips += `<span class="chip">${s.via}</span>`;
+  if (s.quality) chips += `<span class="chip">${s.quality}</span>`;
+  $('bg' + idx).innerHTML = chips;
   const pct = s.segTotal ? (s.segDone / s.segTotal * 100) : (s.totalSize ? s.downloaded / s.totalSize * 100 : 0);
   $('p' + idx).style.width = Math.min(pct, 100) + '%';
   $('pc' + idx).textContent = Math.round(pct) + '%';
@@ -837,26 +792,20 @@ function updateSlotUI(idx) {
 }
 
 function renderQ() {
-  const el = document.getElementById('qEl');
-  document.getElementById('qCount').textContent = Q.length;
-  if (!Q.length) {
-    el.innerHTML = '<span class="text-slate-700">No items queued</span>';
-    return;
-  }
+  $('qCount').textContent = Q.length;
+  const el = $('qEl');
+  if (!Q.length) { el.innerHTML = '<div class="idle" style="padding:14px">Empty</div>'; return; }
   el.innerHTML = Q.map((q, i) => {
-    const retry = q._requeues ? ` <span class="text-amber-500/70">↻${q._requeues}</span>` : '';
-    return `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-slate-400">${q.title}${retry}</span><button onclick="Q.splice(${i},1);renderQ();updateStats()" class="text-slate-700 hover:text-red-400 ml-2 shrink-0 transition-colors"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>`;
+    const retry = q._requeues ? ` · retry ${q._requeues}` : '';
+    return `<div class="list-item"><span>${q.title}${retry}</span><button class="btn-tiny" type="button" onclick="Q.splice(${i},1);renderQ()">✕</button></div>`;
   }).join('');
 }
 
 function renderDone() {
-  const el = document.getElementById('dEl');
-  if (!Done.length) {
-    el.innerHTML = '<span class="text-slate-700">No completed downloads</span>';
-    return;
-  }
+  const el = $('dEl');
+  if (!Done.length) { el.innerHTML = '<div class="idle" style="padding:14px">Empty</div>'; return; }
   el.innerHTML = Done.map((d, i) =>
-    `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80"><svg class="w-3 h-3 inline mr-1 -mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob ? `<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>` : ''}</div>`
+    `<div class="list-item"><span>✓ ${d.title} <span style="color:var(--muted)">${fmtBytes(d.size)}</span></span>${d.blob ? `<button class="btn-tiny" type="button" onclick="redownload(${i})">Save</button>` : ''}</div>`
   ).join('');
 }
 
@@ -871,16 +820,12 @@ function toMp4Filename(filename) {
 }
 
 function triggerBrowserDownload(blob, filename) {
-  const targetFilename = toMp4Filename(filename);
-  const targetMimeType = targetFilename.toLowerCase().endsWith('.mp4') ? 'video/mp4' : (blob.type || 'application/octet-stream');
-  const file = new File([blob], targetFilename, { type: targetMimeType, lastModified: Date.now() });
+  const name = toMp4Filename(filename);
+  const file = new File([blob], name, { type: 'video/mp4', lastModified: Date.now() });
   const url = URL.createObjectURL(file);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = targetFilename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 180000);
 }
 
@@ -889,67 +834,56 @@ async function loadToMp4() {
   if (window.toMp4) return window.toMp4;
   if (!toMp4Loader) {
     toMp4Loader = import('https://cdn.jsdelivr.net/npm/@invintusmedia/tomp4@1.7.4/src/index.min.js')
-      .then(mod => {
-        window.toMp4 = mod.default || mod.toMp4;
-        return window.toMp4;
-      });
+      .then(mod => { window.toMp4 = mod.default || mod.toMp4; return window.toMp4; });
   }
   return toMp4Loader;
 }
 
 async function transmuxTsToMp4(tsSegments) {
   const converter = await loadToMp4();
-  if (!converter?.stitchTs) throw new Error('MP4 muxer failed to load. Refresh and try again.');
-  const validSegments = tsSegments.filter(bytes => bytes?.byteLength);
-  if (!validSegments.length) throw new Error('No video data to package');
-  const mp4 = converter.stitchTs(validSegments);
-  const mp4Data = mp4.data || mp4;
-  if (mp4Data?.[4] !== 0x66 || mp4Data?.[5] !== 0x74 || mp4Data?.[6] !== 0x79 || mp4Data?.[7] !== 0x70) {
-    throw new Error('MP4 muxer returned invalid output');
+  if (!converter?.stitchTs) throw new Error('MP4 muxer failed to load');
+  const valid = tsSegments.filter(b => b?.byteLength);
+  if (!valid.length) throw new Error('No video data');
+  const mp4 = converter.stitchTs(valid);
+  const data = mp4.data || mp4;
+  if (data?.[4] !== 0x66 || data?.[5] !== 0x74 || data?.[6] !== 0x79 || data?.[7] !== 0x70) {
+    throw new Error('Invalid MP4 output');
   }
-  const blob = new Blob([mp4Data], { type: 'video/mp4' });
-  if (!blob.size) throw new Error('MP4 transmux produced no output');
+  const blob = new Blob([data], { type: 'video/mp4' });
+  if (!blob.size) throw new Error('Empty MP4');
   return blob;
 }
 
-/* ---------- Queue / slots ---------- */
-
-function enqueue(item, front = false) {
-  if (front) Q.unshift(item);
-  else Q.push(item);
-  renderQ();
-}
+function enqueue(item) { Q.push(item); renderQ(); }
 
 function go() {
-  const url = document.getElementById('urlIn').value.trim();
+  const url = $('urlIn').value.trim();
   if (!url) { toast('Enter a URL', false); return; }
-  const parsed = parseUrl(url), audio = document.getElementById('audSel').value;
+  const parsed = parseUrl(url), audio = $('audSel').value;
   let item;
   if (parsed) {
-    log(`Parsed: slug="${parsed.slug}" ep=${parsed.ep}`, 'api');
+    log(`Parsed ${parsed.slug} ep ${parsed.ep}`, 'api');
     const t = parsed.slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
     item = { url, slug: parsed.slug, ep: parsed.ep, platform: parsed.platform, audio, title: t + ' Ep' + parsed.ep, _requeues: 0 };
   } else {
-    item = { url, audio, title: url.split('/').pop()?.substring(0, 30) || 'Download', platform: 'direct', _requeues: 0 };
+    item = { url, audio, title: url.split('/').pop()?.slice(0, 30) || 'Download', platform: 'direct', _requeues: 0 };
   }
   const free = Slots.findIndex(s => s === null);
   if (free !== -1) startSlot(free, item);
-  else { enqueue(item); log('Queued: ' + item.title); }
-  document.getElementById('urlIn').value = '';
-  document.getElementById('urlBadge').classList.add('hidden');
-  document.getElementById('urlHint').classList.add('hidden');
+  else { enqueue(item); log('Queued ' + item.title); }
+  $('urlIn').value = '';
+  detectUrl();
   updateStats();
 }
 
 async function goAll() {
-  const url = document.getElementById('urlIn').value.trim();
+  const url = $('urlIn').value.trim();
   if (!url) { toast('Enter a URL', false); return; }
   const parsed = parseUrl(url);
-  if (!parsed) { toast('Not an anime URL', false); return; }
-  const audio = document.getElementById('audSel').value;
+  if (!parsed) { toast('Need an anime URL', false); return; }
+  const audio = $('audSel').value;
   let slug = parsed.slug, title = slug.replace(/-[a-z0-9]{5}$/i, '').replace(/-/g, ' ');
-  log('Fetching episode list...', 'api');
-  toast('Loading episodes...');
+  log('Loading episode list…', 'api');
   try {
     if (parsed.platform === 'hianime') {
       slug = await resolveHiAnimeSlug(slug);
@@ -965,92 +899,70 @@ async function goAll() {
     if (!count) {
       const er = await fetchWithRetry(`${API}/api/anime/${slug}/episodes`, {}, 2, 'episodes');
       const ed = await er.json();
-      if (ed.ok && ed.data) {
-        const eps = ed.data.episodes || ed.data;
-        if (Array.isArray(eps)) count = eps.length;
-      }
+      const eps = ed?.data?.episodes || ed?.data;
+      if (Array.isArray(eps)) count = eps.length;
     }
     if (!count) throw new Error('No episodes found');
-    log(`Found ${count} episodes for "${title}"`, 'ok');
-    if (!confirm(`Download all ${count} episodes of "${title}" (${audio.toUpperCase()})?`)) {
-      log('Cancelled', 'warn');
-      return;
-    }
+    if (!confirm(`Queue all ${count} episodes of "${title}" (${audio.toUpperCase()})?`)) return;
     for (let e = 1; e <= count; e++) {
       const item = { url, slug, ep: e, platform: 'anikoto', audio, title: `${title} Ep${e}`, _requeues: 0 };
       const free = Slots.findIndex(s => s === null);
       if (free !== -1 && e <= 2) startSlot(free, item);
       else enqueue(item);
     }
-    renderQ();
-    updateStats();
-    toast(`Queued ${count} episodes!`);
+    renderQ(); updateStats();
+    toast(`Queued ${count} episodes`);
     log(`Queued ${count} episodes`, 'ok');
   } catch (e) {
-    log('Error: ' + e.message, 'err');
-    toast(e.message, false);
+    log(e.message, 'err'); toast(e.message, false);
   }
-  document.getElementById('urlIn').value = '';
-  document.getElementById('urlBadge').classList.add('hidden');
-  document.getElementById('urlHint').classList.add('hidden');
+  $('urlIn').value = ''; detectUrl();
 }
 
 async function startSlot(idx, item) {
   const ac = new AbortController();
   AbortCtrl[idx] = ac;
   Slots[idx] = {
-    ...item,
-    downloaded: 0, totalSize: 0, speed: 0, elapsed: 0,
-    segDone: 0, segTotal: 0, status: 'Starting...',
+    ...item, downloaded: 0, totalSize: 0, speed: 0, elapsed: 0,
+    segDone: 0, segTotal: 0, status: 'Starting…',
     startTime: Date.now(), lastSpeedCheck: Date.now(), lastBytes: 0,
-    subtitle: '', audioType: item.audio, serverName: '', via: ''
+    subtitle: '', audioType: item.audio, serverName: '', via: '', quality: ''
   };
-  updateSlotUI(idx);
-  updateStats();
+  updateSlotUI(idx); updateStats();
   let failed = false;
   try {
     if (item.platform === 'anikoto' || item.platform === 'hianime') await downloadAnime(idx, item, ac.signal);
     else await downloadDirect(idx, item.url, item.title, ac.signal);
   } catch (e) {
-    if (e.name === 'AbortError') {
-      log(`Slot ${idx + 1}: Cancelled`, 'warn');
-    } else {
+    if (e.name === 'AbortError') log(`Slot ${idx + 1}: cancelled`, 'warn');
+    else {
       failed = true;
       log(`Slot ${idx + 1}: ${e.message}`, 'err');
       toast(e.message, false);
-      // Re-queue failed episodes instead of dropping them
-      const requeues = (item._requeues || 0);
+      const requeues = item._requeues || 0;
       if (requeues < MAX_REQUEUE && item.platform !== 'direct') {
-        const retryItem = { ...item, _requeues: requeues + 1 };
-        log(`Slot ${idx + 1}: Re-queuing "${item.title}" (attempt ${requeues + 2}/${MAX_REQUEUE + 1})`, 'warn');
-        enqueue(retryItem); // end of queue — give other eps a chance first
+        enqueue({ ...item, _requeues: requeues + 1 });
+        log(`Re-queued "${item.title}" (${requeues + 2}/${MAX_REQUEUE + 1})`, 'warn');
       } else if (item.platform !== 'direct') {
-        Failed.push({ title: item.title, error: e.message, item });
-        log(`Slot ${idx + 1}: Gave up on "${item.title}" after ${requeues + 1} tries`, 'err');
+        Failed.push({ title: item.title, error: e.message });
       }
     }
   }
-  Slots[idx] = null;
-  AbortCtrl[idx] = null;
-  updateSlotUI(idx);
-  updateStats();
-  if (Q.length > 0) {
-    const next = Q.shift();
-    renderQ();
-    await sleep(failed ? SLOT_STAGGER_MS + 1500 : SLOT_STAGGER_MS);
+  Slots[idx] = null; AbortCtrl[idx] = null;
+  updateSlotUI(idx); updateStats();
+  if (Q.length) {
+    const next = Q.shift(); renderQ();
+    await sleep(failed ? SLOT_STAGGER_MS + 600 : SLOT_STAGGER_MS);
     startSlot(idx, next);
   }
 }
 
-function cancel(idx) {
-  if (AbortCtrl[idx]) AbortCtrl[idx].abort();
-}
+function cancel(idx) { if (AbortCtrl[idx]) AbortCtrl[idx].abort(); }
 
 function trackSpeed(idx) {
-  const s = Slots[idx];
-  if (!s) return;
+  const s = Slots[idx]; if (!s) return;
   const now = Date.now(), dt = (now - s.lastSpeedCheck) / 1000;
-  if (dt >= 0.5) {
+  if (dt >= 0.4) {
     s.speed = (s.downloaded - s.lastBytes) / dt;
     s.lastBytes = s.downloaded;
     s.lastSpeedCheck = now;
@@ -1066,25 +978,21 @@ async function resolveHiAnimeSlug(hiSlug) {
   return d.data.results[0].slug;
 }
 
-/** Prefer VidPlay (more reliable through Render) over HD-1 (often 403). */
 function rankSources(sources, wantAudio) {
   const withM3u8 = sources.filter(s => s.m3u8);
   const audioMatch = withM3u8.filter(s => s.type === wantAudio);
   const pool = audioMatch.length ? audioMatch.concat(withM3u8.filter(s => s.type !== wantAudio)) : withM3u8;
-
-  const scoreOf = s => {
-    let score = 0;
-    const name = (s.server || '');
-    if (/VidPlay/i.test(name)) score += 100;
-    if (/Kiwi/i.test(name)) score += 80;
-    if (/Vidstream/i.test(name)) score += 40;
-    if (/^HD-?1/i.test(name)) score -= 30; // often CF-blocks datacenter IPs
-    if (/^HD/i.test(name)) score -= 10;
-    if (s.type === wantAudio) score += 15;
-    if (s.type === 'hsub' && wantAudio === 'sub') score += 5;
-    return score;
+  const score = s => {
+    let n = 0;
+    const name = s.server || '';
+    if (/VidPlay/i.test(name)) n += 100;
+    if (/Kiwi/i.test(name)) n += 80;
+    if (/Vidstream/i.test(name)) n += 40;
+    if (/^HD-?1/i.test(name)) n -= 30;
+    if (s.type === wantAudio) n += 15;
+    return n;
   };
-  return pool.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
+  return pool.slice().sort((a, b) => score(b) - score(a));
 }
 
 async function downloadAnime(idx, item, signal) {
@@ -1092,27 +1000,16 @@ async function downloadAnime(idx, item, signal) {
   const ep = item.ep || 1, audio = item.audio || 'sub';
 
   if (item.platform === 'hianime') {
-    Slots[idx].status = 'Searching...';
-    updateSlotUI(idx);
-    log(`Slot ${idx + 1}: Searching...`, 'api');
+    Slots[idx].status = 'Searching…'; updateSlotUI(idx);
     slug = await resolveHiAnimeSlug(slug);
-    try {
-      const sr = await fetchWithRetry(`${API}/api/search?keyword=${encodeURIComponent(slug.replace(/-/g, ' ').substring(0, 20))}`, {}, 2, 'search');
-      const sd = await sr.json();
-      if (sd.ok && sd.data?.results?.[0]) Slots[idx].title = sd.data.results[0].title;
-    } catch (_) {}
-    log(`Slot ${idx + 1}: → ${Slots[idx].title || slug}`, 'ok');
   }
 
-  Slots[idx].status = 'Getting sources...';
-  updateSlotUI(idx);
+  Slots[idx].status = 'Getting sources…'; updateSlotUI(idx);
   log(`Slot ${idx + 1}: /api/watch/${slug}?ep=${ep}`, 'api');
-
-  const resp = await fetchWithRetry(`${API}/api/watch/${slug}?ep=${ep}`, { signal }, MAX_RETRIES, `Slot ${idx + 1} watch`);
+  const resp = await fetchWithRetry(`${API}/api/watch/${slug}?ep=${ep}`, { signal }, MAX_RETRIES, `Slot ${idx + 1}`);
   const text = await resp.text();
   const sources = [];
   let epInfo = null;
-
   try {
     const j = JSON.parse(text);
     if (j.ok && j.data) {
@@ -1123,181 +1020,126 @@ async function downloadAnime(idx, item, signal) {
     for (const line of text.split('\n')) {
       if (!line.startsWith('data: ')) continue;
       try {
-        const o = JSON.parse(line.substring(6));
+        const o = JSON.parse(line.slice(6));
         if (o.type === 'source' && o.source) sources.push(o.source);
         if (o.type === 'episode' && o.episode) epInfo = o.episode;
       } catch (_) {}
     }
   }
-
   if (!sources.length) throw new Error('No sources');
-  if (epInfo) Slots[idx].subtitle = `Episode ${epInfo.number}`;
+  if (epInfo) Slots[idx].subtitle = 'Episode ' + epInfo.number;
 
-  // Normalize: always keep real m3u8 + unwrapped paths
   for (const s of sources) {
     if (s.m3u8) s.m3u8 = unwrapProxyUrl(s.m3u8);
     if (s.proxyUrl) {
-      const unwrapped = unwrapProxyUrl(s.proxyUrl);
-      if (!s.m3u8 && /^https?:\/\//i.test(unwrapped)) s.m3u8 = unwrapped;
-      // Keep proxyUrl only as a hint — we rebuild clean proxy URLs ourselves
-    }
-    if (!s.referer && s.proxyUrl) {
-      const r = extractRefererFromProxy(s.proxyUrl);
-      if (r) s.referer = r;
+      const u = unwrapProxyUrl(s.proxyUrl);
+      if (!s.m3u8 && /^https?:\/\//i.test(u)) s.m3u8 = u;
     }
   }
-
-  const avail = sources.filter(s => s.m3u8).map(s => `${s.server}(${s.type})`).join(', ');
-  log(`Slot ${idx + 1}: ${sources.length} sources: ${avail}`, 'ok');
 
   const ordered = rankSources(sources, audio);
-  if (!ordered.length) throw new Error('No HLS/m3u8 sources found');
+  if (!ordered.length) throw new Error('No m3u8 sources');
 
-  // Expand each source with CDN-mirror variants (same path, different host) so
-  // blocked kryntal/cloudbuzz edges are tried as mewstream first when needed.
+  // Expand with CDN mirrors, de-dupe by final URL
   const expanded = [];
-  const seenM3u8 = new Set();
+  const seen = new Set();
   for (const src of ordered) {
-    const cands = buildUrlCandidates(src.m3u8);
-    for (let i = 0; i < cands.length; i++) {
-      const m = cands[i];
-      if (seenM3u8.has(m)) continue;
-      seenM3u8.add(m);
-      let hostTag = '';
-      try { hostTag = new URL(m).hostname.replace(/^cdn\./, ''); } catch (_) {}
-      expanded.push({
-        ...src,
-        m3u8: m,
-        server: i === 0 ? src.server : `${src.server}@${hostTag}`,
-        _mirrored: i > 0
-      });
+    for (const [i, m] of buildUrlCandidates(src.m3u8).entries()) {
+      if (seen.has(m)) continue;
+      seen.add(m);
+      let tag = '';
+      try { tag = new URL(m).hostname.replace(/^cdn\./, ''); } catch (_) {}
+      expanded.push({ ...src, m3u8: m, server: i ? `${src.server}@${tag}` : src.server, _mirrored: i > 0 });
     }
   }
 
-  log(`Slot ${idx + 1}: Try order → ${expanded.map(s => s.server).join(' → ')}`, 'dl');
-
+  log(`Slot ${idx + 1}: ${expanded.length} paths · prefer 1080p`, 'dl');
   const fn = sanitizeFilename(`${Slots[idx].title || slug}_Ep${ep}_${ordered[0].type || audio}`) + '.ts';
   let lastErr = null;
-
   for (const src of expanded) {
-    const realM3u8 = unwrapProxyUrl(src.m3u8);
-    const ref = src.referer || 'https://megaplay.buzz/';
     Slots[idx].serverName = src.server;
     Slots[idx].audioType = src.type;
     if (src._mirrored) Slots[idx].via = 'mirror';
     updateSlotUI(idx);
-    log(`Slot ${idx + 1}: Trying ${src.server} (${src.type})${src._mirrored ? ' [CDN mirror]' : ''}...`, 'dl');
+    log(`Slot ${idx + 1}: ${src.server} (${src.type})${src._mirrored ? ' mirror' : ''}`, 'dl');
     try {
-      await downloadHLS(idx, realM3u8, ref, fn, signal);
+      await downloadHLS(idx, unwrapProxyUrl(src.m3u8), src.referer || 'https://megaplay.buzz/', fn, signal);
       return;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
       lastErr = e;
-      log(`Slot ${idx + 1}: ${src.server} failed: ${e.message}`, 'warn');
-      await sleep(400 + Math.random() * 400);
+      log(`Slot ${idx + 1}: ${src.server} failed · ${e.message}`, 'warn');
+      // Don't wait long — try next path quickly
+      await sleep(120);
     }
   }
   throw lastErr || new Error('All sources failed');
 }
 
 async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
-  const realMaster = unwrapProxyUrl(m3u8Url);
-  Slots[idx].status = 'Fetching playlist...';
-  updateSlotUI(idx);
+  const master = unwrapProxyUrl(m3u8Url);
+  Slots[idx].status = 'Fetching playlist…'; updateSlotUI(idx);
 
-  let resp;
-  try {
-    resp = await smartFetch(idx, realMaster, referer, { isSegment: false, signal });
-  } catch (e) {
-    throw new Error(`Manifest: ${e.message}`);
-  }
-
-  // responseTextOrThrow not needed — smartFetch already validated m3u8 / error body
+  let resp = await smartFetch(idx, master, referer, { isSegment: false, signal });
   let txt = await resp.text();
-  if (!looksLikeM3u8(txt) || looksLikeErrorBody(txt)) {
-    throw new Error('Manifest: invalid playlist body');
-  }
+  if (!looksLikeM3u8(txt)) throw new Error('Invalid playlist');
   let lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Prefer a non-blocked host as relative-resolution base (mewstream if master was mirrored)
-  let cdnBase = realMaster;
+  let cdnBase = master;
   try {
-    if (isBlockedCdnHost(new URL(realMaster).hostname)) {
-      const u = new URL(realMaster);
-      u.hostname = CDN_MIRROR_HOSTS[0];
-      cdnBase = u.toString();
-    }
+    if (isBlockedHost(new URL(master).hostname)) cdnBase = withHost(master, CDN_MIRROR_HOSTS[0]);
   } catch (_) {}
-  // If playlist already rewrote to mewstream absolute URLs, pick that as base
   for (const l of lines) {
-    if (/^https?:\/\/cdn\.mewstream\.buzz\//i.test(l)) {
-      cdnBase = l;
-      break;
-    }
+    if (/^https?:\/\/cdn\.mewstream\.buzz\//i.test(l)) { cdnBase = l; break; }
   }
 
-  // Master playlist → pick highest quality variant
+  // Master → best quality (highest resolution). Never pick a lower rung on purpose.
   if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
-    let best = null, bestR = 0;
+    let best = null, bestR = -1, bestBw = -1;
     for (let j = 0; j < lines.length; j++) {
-      if (lines[j].startsWith('#EXT-X-STREAM-INF')) {
-        const rm = lines[j].match(/RESOLUTION=\d+x(\d+)/);
-        const r = rm ? +rm[1] : 0;
-        const next = lines[j + 1];
-        if (next && !next.startsWith('#') && r >= bestR) {
-          bestR = r;
-          best = next;
-        }
+      if (!lines[j].startsWith('#EXT-X-STREAM-INF')) continue;
+      const next = lines[j + 1];
+      if (!next || next.startsWith('#')) continue;
+      const rm = lines[j].match(/RESOLUTION=\d+x(\d+)/);
+      const bm = lines[j].match(/BANDWIDTH=(\d+)/);
+      const r = rm ? +rm[1] : 0;
+      const bw = bm ? +bm[1] : 0;
+      if (r > bestR || (r === bestR && bw > bestBw)) {
+        bestR = r; bestBw = bw; best = next;
       }
     }
-    if (!best) {
-      for (let j = 0; j < lines.length; j++) {
-        if (lines[j].startsWith('#EXT-X-STREAM-INF') && lines[j + 1] && !lines[j + 1].startsWith('#')) {
-          best = lines[j + 1];
-          break;
-        }
-      }
-    }
-    if (!best) throw new Error('No variant qualities found');
-    log(`Slot ${idx + 1}: Selected ${bestR || '?'}p`, 'dl');
-
-    const variantUrl = resolveAgainstBase(best, cdnBase);
-    // Recurse into media playlist
-    return downloadHLS(idx, variantUrl, referer, filename, signal);
+    if (!best) throw new Error('No quality variants');
+    Slots[idx].quality = (bestR > 0 ? bestR + 'p' : 'max');
+    log(`Slot ${idx + 1}: selected ${Slots[idx].quality} (highest)`, 'ok');
+    return downloadHLS(idx, resolveAgainstBase(best, cdnBase), referer, filename, signal);
   }
 
-  // Media playlist — collect segment URLs (absolute CDN), force mirror hosts
   const segs = [];
-  let mirroredSegs = 0;
+  let mirrored = 0;
   for (const l of lines) {
     if (!l || l.startsWith('#')) continue;
-    let seg = resolveAgainstBase(l, cdnBase);
-    seg = unwrapProxyUrl(seg);
+    let seg = unwrapProxyUrl(resolveAgainstBase(l, cdnBase));
     try {
       const su = new URL(seg);
-      if (isBlockedCdnHost(su.hostname)) {
-        su.hostname = CDN_MIRROR_HOSTS[0];
+      if (isBlockedHost(su.hostname)) {
+        su.hostname = stickyPath?.host || CDN_MIRROR_HOSTS[0];
         su.protocol = 'https:';
         seg = su.toString();
-        mirroredSegs++;
+        mirrored++;
       }
     } catch (_) {}
     segs.push(seg);
   }
-  if (!segs.length) throw new Error('No segments found');
-
-  // Nested-proxy sanity
-  const sample = segs[0] || '';
-  if (/\/api\/proxy/i.test(sample)) {
-    log(`Slot ${idx + 1}: Detected nested proxy in segments — unwrapping`, 'warn');
-    for (let i = 0; i < segs.length; i++) segs[i] = unwrapProxyUrl(segs[i]);
-  }
-  if (mirroredSegs) {
-    log(`Slot ${idx + 1}: ${mirroredSegs} segments remapped → ${CDN_MIRROR_HOSTS[0]}`, 'ok');
-    if (Slots[idx]) Slots[idx].via = 'mirror';
+  if (!segs.length) throw new Error('No segments');
+  if (mirrored) {
+    log(`Slot ${idx + 1}: ${mirrored} segments → ${stickyPath?.host || CDN_MIRROR_HOSTS[0]}`, 'ok');
+    Slots[idx].via = 'mirror';
   }
 
-  log(`Slot ${idx + 1}: ${segs.length} segments (concurrency ${SEG_CONCURRENCY})`, 'dl');
+  // Prefetch muxer while segments download
+  const muxReady = loadToMp4().catch(() => null);
+
+  log(`Slot ${idx + 1}: ${segs.length} segments · x${SEG_CONCURRENCY}`, 'dl');
   Slots[idx].segTotal = segs.length;
   Slots[idx].segDone = 0;
   updateSlotUI(idx);
@@ -1305,102 +1147,86 @@ async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
   const segData = new Array(segs.length);
   let nxt = 0, done = 0;
   const failedIdx = [];
+  let uiClock = 0;
 
   const fetchSeg = async (si) => {
     const target = segs[si];
     let attempts = 0;
-    const maxSegTries = Math.min(4, MAX_RETRIES);
-    while (attempts <= maxSegTries) {
+    const maxTries = Math.min(3, MAX_RETRIES);
+    while (attempts <= maxTries) {
       try {
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
         const r = await smartFetch(idx, target, referer, { isSegment: true, signal });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const b = await r.arrayBuffer();
-        if (!b.byteLength) throw new Error('empty segment');
-        // Reject tiny HTML/JSON error pages disguised as 200
-        if (b.byteLength < 200) {
-          const peek = new TextDecoder().decode(b.slice(0, 120));
-          if (looksLikeErrorBody(peek) || peek.trim().startsWith('{')) throw new Error('error body');
-        }
+        if (!b.byteLength || !isValidMediaBytes(b)) throw new Error('bad segment');
         segData[si] = new Uint8Array(b);
         Slots[idx].downloaded += b.byteLength;
         break;
       } catch (e) {
         if (e.name === 'AbortError') throw e;
         attempts++;
-        if (attempts > maxSegTries) {
+        if (attempts > maxTries) {
           segData[si] = new Uint8Array(0);
           failedIdx.push(si);
           break;
         }
-        await sleep(300 * attempts + Math.random() * 200);
+        // brief backoff only
+        await sleep(80 * attempts + (Math.random() * 60));
       }
     }
     done++;
     Slots[idx].segDone = done;
     trackSpeed(idx);
-    Slots[idx].status = `${done}/${segs.length} segments${failedIdx.length ? ` (${failedIdx.length} failed)` : ''}`;
-    updateSlotUI(idx);
-    updateStats();
+    const now = Date.now();
+    if (now - uiClock > 120 || done === segs.length) {
+      uiClock = now;
+      Slots[idx].status = `${done}/${segs.length}` + (failedIdx.length ? ` · ${failedIdx.length} missing` : '');
+      updateSlotUI(idx); updateStats();
+    }
   };
 
   await new Promise((res, rej) => {
     let act = 0;
     const pump = () => {
       while (act < SEG_CONCURRENCY && nxt < segs.length) {
-        if (signal.aborted) {
-          rej(new DOMException('Aborted', 'AbortError'));
-          return;
-        }
-        const si = nxt++;
-        act++;
-        fetchSeg(si)
-          .then(() => {
-            act--;
-            if (done >= segs.length) res();
-            else pump();
-          })
-          .catch(rej);
+        if (signal.aborted) { rej(new DOMException('Aborted', 'AbortError')); return; }
+        const si = nxt++; act++;
+        fetchSeg(si).then(() => {
+          act--;
+          if (done >= segs.length) res();
+          else pump();
+        }).catch(rej);
       }
     };
     pump();
   });
 
-  const failRatio = failedIdx.length / segs.length;
-  if (failRatio > 0.12) {
+  if (failedIdx.length / segs.length > 0.12) {
     throw new Error(`Too many segments failed (${failedIdx.length}/${segs.length})`);
   }
-  if (failedIdx.length) {
-    log(`Slot ${idx + 1}: ${failedIdx.length} segments missing — muxing partial`, 'warn');
-  }
+  if (failedIdx.length) log(`Slot ${idx + 1}: ${failedIdx.length} gaps · muxing anyway`, 'warn');
 
-  Slots[idx].status = 'Muxing standard MP4...';
-  updateSlotUI(idx);
+  Slots[idx].status = 'Building MP4…'; updateSlotUI(idx);
+  await muxReady;
   const total = segData.reduce((a, c) => a + (c?.byteLength || 0), 0);
-  const outFilename = toMp4Filename(filename);
+  const outName = toMp4Filename(filename);
   const blob = await transmuxTsToMp4(segData);
-  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} TS → ${fmtBytes(blob.size)} MP4`, 'ok');
-  toast(`Downloaded: ${outFilename}`);
-  if (AUTO_SAVE) triggerBrowserDownload(blob, outFilename);
+  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} → ${fmtBytes(blob.size)} MP4`, 'ok');
+  toast('Downloaded ' + outName);
+  if (AUTO_SAVE) triggerBrowserDownload(blob, outName);
   Done.unshift({
     title: (Slots[idx].title || 'Video') + ' ' + (Slots[idx].subtitle || ''),
-    filename: outFilename,
-    size: blob.size,
-    blob
+    filename: outName, size: blob.size, blob
   });
-  DoneCount++;
-  TotalBytes += blob.size;
-  renderDone();
-  updateStats();
+  DoneCount++; TotalBytes += blob.size;
+  renderDone(); updateStats();
 }
 
 async function downloadDirect(idx, url, title, signal) {
-  Slots[idx].status = 'Connecting...';
-  updateSlotUI(idx);
-  const resp = await fetchWithRetry(url, { signal }, MAX_RETRIES, `Slot ${idx + 1} direct`);
+  Slots[idx].status = 'Connecting…'; updateSlotUI(idx);
+  const resp = await fetchWithRetry(url, { signal }, MAX_RETRIES, `Slot ${idx + 1}`);
   Slots[idx].totalSize = parseInt(resp.headers.get('content-length') || '0');
-  Slots[idx].status = 'Downloading...';
-  updateSlotUI(idx);
+  Slots[idx].status = 'Downloading…'; updateSlotUI(idx);
   const reader = resp.body.getReader();
   const chunks = [];
   while (true) {
@@ -1410,63 +1236,55 @@ async function downloadDirect(idx, url, title, signal) {
     chunks.push(value);
     Slots[idx].downloaded += value.byteLength;
     trackSpeed(idx);
-    if (Date.now() - (Slots[idx]._lu || 0) > 200) {
+    if (Date.now() - (Slots[idx]._lu || 0) > 150) {
       Slots[idx]._lu = Date.now();
-      updateSlotUI(idx);
-      updateStats();
+      updateSlotUI(idx); updateStats();
     }
   }
   const blob = new Blob(chunks, { type: 'video/mp4' });
   const fn = sanitizeFilename(title) + '.mp4';
-  log(`Slot ${idx + 1}: ✅ ${fmtBytes(Slots[idx].downloaded)}`, 'ok');
-  toast(`Downloaded: ${fn}`);
+  log(`Slot ${idx + 1}: ${fmtBytes(Slots[idx].downloaded)}`, 'ok');
+  toast('Downloaded ' + fn);
   if (AUTO_SAVE) triggerBrowserDownload(blob, fn);
   Done.unshift({ title, filename: fn, size: Slots[idx].downloaded, blob });
-  DoneCount++;
-  TotalBytes += Slots[idx].downloaded;
-  renderDone();
-  updateStats();
+  DoneCount++; TotalBytes += Slots[idx].downloaded;
+  renderDone(); updateStats();
 }
 
 async function testApi() {
-  const el = document.getElementById('apiSt');
-  el.innerHTML = '<span class="spin"></span><span class="text-slate-600 ml-1.5">Checking</span>';
+  $('apiTxt').textContent = 'Checking…';
+  $('apiDot').className = 'dot';
   try {
     const r = await fetch(API + '/api/home');
     if (r.ok) {
-      el.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-400 ml-1.5">Connected</span>';
-      log('✓ API connected', 'ok');
+      $('apiDot').className = 'dot ok';
+      $('apiTxt').textContent = 'API connected';
+      log('API connected', 'ok');
     } else {
-      el.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-400 ml-1.5">' + r.status + '</span>';
+      $('apiDot').className = 'dot warn';
+      $('apiTxt').textContent = 'API ' + r.status;
     }
   } catch (e) {
-    el.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-red-400/70 ml-1.5">Offline</span>';
+    $('apiDot').className = 'dot bad';
+    $('apiTxt').textContent = 'API offline';
     log('API: ' + e.message, 'err');
-    if (window.location.protocol === 'file:') {
-      document.getElementById('setupBanner').classList.remove('hidden');
-      log('Host on Render/Vercel or set API URL in Settings', 'warn');
-    }
+    if (location.protocol === 'file:') $('setupBanner').classList.remove('hidden');
   }
-  if (CF_WORKER) log('CF Worker: ' + CF_WORKER, 'api');
-  else log('Tip: set a Cloudflare Worker URL in Settings to bypass Render IP bans', 'warn');
 }
 
 loadCfg();
-log('StreamVault v6.4 ready', 'ok');
-log('API: ' + (API || 'same-origin') + ' | Conc: ' + SEG_CONCURRENCY + ' | Retries: ' + MAX_RETRIES + ' | Requeue: ' + MAX_REQUEUE, 'api');
-log('CDN mirrors: ' + CDN_MIRROR_HOSTS.join(', ') + ' (auto-swap when kryntal/cloudbuzz block Render)', 'api');
-if (window.location.protocol === 'file:') {
-  log('⚠ file:// — host on Render or set API URL', 'err');
-  document.getElementById('setupBanner').classList.remove('hidden');
+log('StreamVault ready', 'ok');
+log(`API ${API || 'same-origin'} · concurrency ${SEG_CONCURRENCY} · max quality kept`, 'api');
+if (location.protocol === 'file:') {
+  log('Running from file:// — set API URL in Settings', 'warn');
+  $('setupBanner').classList.remove('hidden');
 }
 testApi();
 setInterval(() => {
   Slots.forEach((s, i) => { if (s) { trackSpeed(i); updateSlotUI(i); } });
   updateStats();
 }, 1000);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.getElementById('cfgModal').classList.remove('show');
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
 </script>
 </body>
 </html>
