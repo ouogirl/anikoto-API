@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StreamVault v6.1</title>
+<title>StreamVault v6.2</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
@@ -68,7 +68,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
     <div>
       <h1 class="text-[17px] font-bold grad tracking-tight">StreamVault</h1>
-      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.1 — Rate-Limit Aware</p>
+      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.2 — Datacenter Bypass</p>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -175,7 +175,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div>
       <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Segment Concurrency (1-16)</label>
       <input type="number" id="cfgConc" min="1" max="16" value="5">
-      <p class="text-[10px] text-slate-600 mt-1.5">Lower = fewer 429 errors. Default 5.</p>
+      <p class="text-[10px] text-slate-600 mt-1.5">Lower = fewer rate limits. Default 5.</p>
     </div>
     <div>
       <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Retries per request</label>
@@ -184,7 +184,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div>
       <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Slot start stagger (ms)</label>
       <input type="number" id="cfgStagger" min="0" max="30000" value="2000">
-      <p class="text-[10px] text-slate-600 mt-1.5">Delay before starting a new slot from the queue.</p>
     </div>
     <div class="flex items-center justify-between p-3 rounded-xl bg-white/[.02] border border-white/[.04]">
       <label class="text-sm text-slate-300">Auto-download when done</label>
@@ -193,14 +192,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-violet-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
       </label>
     </div>
-    <div class="flex items-center justify-between p-3 rounded-xl bg-white/[.02] border border-white/[.04]">
-      <label class="text-sm text-slate-300">Prefer VidPlay-1 (skip HD-1)</label>
-      <label class="relative inline-flex items-center cursor-pointer">
-        <input type="checkbox" id="cfgPreferVp" checked class="sr-only peer">
-        <div class="w-9 h-5 bg-slate-700 rounded-full peer peer-checked:bg-violet-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
-      </label>
-    </div>
-    <button onclick="resetBadServers()" class="btn-s w-full justify-center" style="padding:8px">Reset bad-server memory</button>
     <button onclick="saveCfg()" class="btn btn-dl w-full justify-center">Save Changes</button>
   </div>
 </div>
@@ -208,17 +199,16 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 <script>
 /* ================================================================
-   StreamVault v6.1 — Rate-Limit Aware Edition
+   StreamVault v6.2 — Datacenter Bypass Edition
    ================================================================ */
 
 const ORIGIN = window.location.origin;
 const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('onrender.com') || ORIGIN.includes('localhost');
 let API = IS_DEPLOYED ? '' : 'https://anikoto-api-hte0.onrender.com';
 let AUTO_SAVE = true;
-let SEG_CONCURRENCY = 5;      // lower = safer for rate limits
+let SEG_CONCURRENCY = 5;
 let MAX_RETRIES = 4;
-let SLOT_STAGGER_MS = 2000;   // stagger start of slot 2, and queue starts
-let PREFER_VIDPLAY = true;
+let SLOT_STAGGER_MS = 2000;
 
 const Slots = [null, null];
 const AbortCtrl = [null, null];
@@ -227,50 +217,23 @@ let Done = [];
 let TotalBytes = 0;
 let DoneCount = 0;
 
-// Track servers that returned 403/429 too often in this session
-// Key: server name — Value: {fails, lastFail}
-const BadServers = {};
-const BAD_THRESHOLD = 3; // skip after this many fails within window
-const BAD_WINDOW_MS = 60000;
-
-function markBad(server) {
-  const now = Date.now();
-  const rec = BadServers[server] || { fails: 0, lastFail: 0 };
-  if (now - rec.lastFail > BAD_WINDOW_MS) rec.fails = 0;
-  rec.fails++;
-  rec.lastFail = now;
-  BadServers[server] = rec;
-}
-function isBad(server) {
-  const rec = BadServers[server];
-  if (!rec) return false;
-  if (Date.now() - rec.lastFail > BAD_WINDOW_MS) { delete BadServers[server]; return false; }
-  return rec.fails >= BAD_THRESHOLD;
-}
-function resetBadServers() {
-  for (const k in BadServers) delete BadServers[k];
-  toast('Bad-server memory cleared');
-  log('Bad-server memory cleared', 'ok');
-}
-
 function loadCfg() {
   try {
-    const c = JSON.parse(localStorage.getItem('sv61') || '{}');
+    const c = JSON.parse(localStorage.getItem('sv62') || '{}');
     if (c.api !== undefined) API = c.api;
     if (c.auto !== undefined) AUTO_SAVE = c.auto;
     if (c.conc) SEG_CONCURRENCY = c.conc;
     if (c.retries !== undefined) MAX_RETRIES = c.retries;
     if (c.stagger !== undefined) SLOT_STAGGER_MS = c.stagger;
-    if (c.preferVp !== undefined) PREFER_VIDPLAY = c.preferVp;
   } catch(e) {}
   document.getElementById('cfgApi').value = API || '(same origin)';
   document.getElementById('cfgAuto').checked = AUTO_SAVE;
   document.getElementById('cfgConc').value = SEG_CONCURRENCY;
   document.getElementById('cfgRetries').value = MAX_RETRIES;
   document.getElementById('cfgStagger').value = SLOT_STAGGER_MS;
-  document.getElementById('cfgPreferVp').checked = PREFER_VIDPLAY;
   if (window.location.protocol === 'file:') document.getElementById('setupBanner').classList.remove('hidden');
 }
+
 function saveCfg() {
   const v = document.getElementById('cfgApi').value.trim();
   API = (v === '(same origin)' || !v) ? '' : v;
@@ -278,8 +241,7 @@ function saveCfg() {
   SEG_CONCURRENCY = Math.max(1, Math.min(16, parseInt(document.getElementById('cfgConc').value) || 5));
   MAX_RETRIES = Math.max(0, Math.min(10, parseInt(document.getElementById('cfgRetries').value) || 4));
   SLOT_STAGGER_MS = Math.max(0, Math.min(30000, parseInt(document.getElementById('cfgStagger').value) || 2000));
-  PREFER_VIDPLAY = document.getElementById('cfgPreferVp').checked;
-  localStorage.setItem('sv61', JSON.stringify({ api: API, auto: AUTO_SAVE, conc: SEG_CONCURRENCY, retries: MAX_RETRIES, stagger: SLOT_STAGGER_MS, preferVp: PREFER_VIDPLAY }));
+  localStorage.setItem('sv62', JSON.stringify({ api: API, auto: AUTO_SAVE, conc: SEG_CONCURRENCY, retries: MAX_RETRIES, stagger: SLOT_STAGGER_MS }));
   document.getElementById('cfgModal').classList.remove('show');
   toast('Settings saved'); testApi();
 }
@@ -291,7 +253,7 @@ function sanitizeFilename(n) { return n.replace(/[<>:"/\\|?*]/g, '_').replace(/\
 
 function log(msg, type = 'info') {
   const el = document.getElementById('logBox');
-  const colors = { info:'text-slate-500', ok:'text-emerald-400', err:'text-red-400', warn:'text-amber-400', api:'text-violet-400', dl:'text-cyan-400' };
+  const colors = { info:'text-slate-500', ok:'text-emerald-400', warn:'text-amber-400', err:'text-red-400', api:'text-violet-400', dl:'text-cyan-400' };
   const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
   const div = document.createElement('div');
   div.className = 'mono anim';
@@ -300,6 +262,7 @@ function log(msg, type = 'info') {
   while (el.children.length > 300) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
 }
+
 function toast(msg, success = true) {
   document.querySelectorAll('.toast').forEach(e => e.remove());
   const d = document.createElement('div'); d.className = 'toast';
@@ -308,44 +271,88 @@ function toast(msg, success = true) {
   setTimeout(() => { if (d.parentNode) d.remove(); }, 3500);
 }
 
-/* ============ Retry-aware fetch ============ */
+/* ============ Intelligent Smart Fetching Engine ============ */
+async function smartFetch(idx, url, originalUrl, referer, isSegment = false, signal) {
+  let fetchUrl = url;
+  if (!url.includes('/api/proxy') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+    fetchUrl = API + '/api/proxy?url=' + encodeURIComponent(originalUrl || url) + '&referer=' + encodeURIComponent(referer);
+  }
+
+  // Strategy 1: Render Proxy (fast check)
+  try {
+    const resp = await fetch(fetchUrl, { signal });
+    if (resp.ok) return resp;
+    if (resp.status === 403 || resp.status === 429) {
+      throw new Error(`Proxy blocked (${resp.status})`);
+    }
+  } catch (e) {
+    if (signal && signal.aborted) throw e;
+  }
+
+  // Strategy 2: Direct Client-Side Bypass
+  // Video CDNs usually allow public CORS requests for TS segments.
+  // We leverage the client's home IP to bypass Render's datacenter block.
+  try {
+    const directUrl = originalUrl || url;
+    const resp = await fetch(directUrl, { signal });
+    if (resp.ok) {
+      if (!isSegment) {
+        log(`Slot ${idx+1}: CDN proxy blocked. Successfully bypassed using direct browser download.`, 'ok');
+      }
+      return resp;
+    }
+  } catch (e) {
+    if (signal && signal.aborted) throw e;
+  }
+
+  // Strategy 3: Public Mirror CORS Proxy (Manifests ONLY to fix CORS blocks)
+  if (!isSegment) {
+    const mirrors = [
+      `https://corsproxy.io/?${encodeURIComponent(originalUrl || url)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(originalUrl || url)}`
+    ];
+    for (const mirror of mirrors) {
+      try {
+        const resp = await fetch(mirror, { signal });
+        if (resp.ok) {
+          log(`Slot ${idx+1}: Manifest loaded via public fallback CORS mirror.`, 'ok');
+          return resp;
+        }
+      } catch (err) {}
+    }
+  }
+
+  throw new Error(`Proxy blocked (403/429) and Direct browser fetch failed.`);
+}
+
 async function fetchWithRetry(url, opts = {}, retries = MAX_RETRIES, label = '') {
   let attempt = 0;
-  let lastErr = null;
   while (attempt <= retries) {
     try {
       const r = await fetch(url, opts);
       if (r.ok) return r;
-      // 403 / 429 / 5xx — worth retrying
       if (r.status === 403 || r.status === 429 || r.status >= 500) {
-        lastErr = new Error(`HTTP ${r.status}`);
         if (attempt < retries) {
-          // exponential backoff + jitter
-          const base = Math.min(8000, 500 * Math.pow(2, attempt));
-          const jitter = Math.floor(Math.random() * 400);
-          const wait = base + jitter;
-          if (label) log(`${label}: ${r.status}, retry ${attempt+1}/${retries} in ${wait}ms`, 'warn');
+          const wait = Math.min(8000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 400);
+          if (label) log(`${label}: ${r.status}, retrying (${attempt+1}/${retries}) in ${wait}ms`, 'warn');
           await sleep(wait);
           attempt++;
           continue;
         }
       }
-      // Other statuses — give up
       throw new Error(`HTTP ${r.status}`);
     } catch (e) {
       if (opts.signal && opts.signal.aborted) throw e;
-      lastErr = e;
       if (attempt < retries) {
         const wait = Math.min(6000, 500 * Math.pow(2, attempt)) + Math.floor(Math.random() * 300);
-        if (label) log(`${label}: ${e.message}, retry ${attempt+1}/${retries} in ${wait}ms`, 'warn');
+        if (label) log(`${label}: ${e.message}, retrying (${attempt+1}/${retries}) in ${wait}ms`, 'warn');
         await sleep(wait);
         attempt++;
         continue;
       }
-      throw lastErr;
+      throw e;
     }
   }
-  throw lastErr || new Error('fetch failed');
 }
 
 function parseUrl(url) {
@@ -355,6 +362,7 @@ function parseUrl(url) {
   if (m) { const e = url.match(/[?&]ep=(\d+)/); return { slug: m[1], ep: e ? +e[1] : 1, platform: 'hianime' }; }
   return null;
 }
+
 function detectUrl() {
   const url = document.getElementById('urlIn').value.trim();
   const badge = document.getElementById('urlBadge'), hint = document.getElementById('urlHint');
@@ -373,6 +381,7 @@ function updateStats() {
   let spd = 0; Slots.forEach(s => { if (s) spd += (s.speed || 0); });
   document.getElementById('sS').textContent = spd > 0 ? fmtBytes(spd) + '/s' : '—';
 }
+
 function updateSlotUI(idx) {
   const s = Slots[idx], $ = id => document.getElementById(id);
   if (!s) { $('e'+idx).classList.remove('hidden'); $('a'+idx).classList.add('hidden'); $('x'+idx).classList.add('hidden'); $('d'+idx).className='w-2.5 h-2.5 rounded-full bg-slate-700'; $('sl'+idx).classList.remove('slot-active'); return; }
@@ -396,16 +405,19 @@ function renderQ() {
   if (!Q.length) { el.innerHTML = '<span class="text-slate-700">No items queued</span>'; return; }
   el.innerHTML = Q.map((q,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-slate-400">${q.title}</span><button onclick="Q.splice(${i},1);renderQ();updateStats()" class="text-slate-700 hover:text-red-400 ml-2 shrink-0">✕</button></div>`).join('');
 }
+
 function renderDone() {
   const el = document.getElementById('dEl');
   if (!Done.length) { el.innerHTML = '<span class="text-slate-700">No completed downloads</span>'; return; }
   el.innerHTML = Done.map((d,i) => `<div class="flex justify-between items-center p-2 rounded-lg bg-white/[.02] mb-1 anim"><span class="truncate text-emerald-400/80">✓ ${d.title} <span class="text-slate-600 text-[10px]">${fmtBytes(d.size)}</span></span>${d.blob?`<button onclick="redownload(${i})" class="btn-s ml-2 shrink-0" style="padding:3px 10px;font-size:10px">↓ Save</button>`:''}</div>`).join('');
 }
+
 function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
 
 function toMp4Filename(filename) {
   return filename.toLowerCase().endsWith('.ts') ? filename.slice(0, -3) + '.mp4' : filename;
 }
+
 function triggerBrowserDownload(blob, filename) {
   const targetFilename = toMp4Filename(filename);
   const targetMimeType = targetFilename.toLowerCase().endsWith('.mp4') ? 'video/mp4' : (blob.type || 'application/octet-stream');
@@ -426,6 +438,7 @@ async function loadToMp4() {
   }
   return toMp4Loader;
 }
+
 async function transmuxTsToMp4(tsSegments) {
   const converter = await loadToMp4();
   if (!converter?.stitchTs) throw new Error('MP4 muxer failed to load');
@@ -466,7 +479,6 @@ async function goAll() {
     log(`Found ${count} episodes for "${title}"`,'ok');
     if(!confirm(`Download all ${count} episodes of "${title}" (${audio.toUpperCase()})?`)){log('Cancelled','warn');return;}
 
-    // Stagger startup: start slot 0 immediately, slot 1 after delay, then queue.
     for(let e=1;e<=count;e++){
       const item={url,slug,ep:e,platform:'anikoto',audio,title:`${title} Ep${e}`};
       if (e === 1 && Slots[0] === null) startSlot(0, item);
@@ -487,11 +499,11 @@ async function startSlot(idx,item) {
   Slots[idx]=null;AbortCtrl[idx]=null;updateSlotUI(idx);updateStats();
   if(Q.length>0){
     const next=Q.shift();renderQ();
-    // Stagger the next slot start to avoid burst
     await sleep(SLOT_STAGGER_MS);
     startSlot(idx,next);
   }
 }
+
 function cancel(idx){if(AbortCtrl[idx])AbortCtrl[idx].abort();}
 function trackSpeed(idx){const s=Slots[idx];if(!s)return;const now=Date.now(),dt=(now-s.lastSpeedCheck)/1000;if(dt>=.5){s.speed=(s.downloaded-s.lastBytes)/dt;s.lastBytes=s.downloaded;s.lastSpeedCheck=now;s.elapsed=(now-s.startTime)/1000;}}
 
@@ -501,7 +513,6 @@ async function resolveHiAnimeSlug(hiSlug) {
   const d=await r.json();if(!d.ok||!d.data?.results?.length)throw new Error(`"${t}" not found`);return d.data.results[0].slug;
 }
 
-/* ============ Smarter source ordering ============ */
 function rankSources(sources, wantAudio) {
   const audioMatch = sources.filter(s => s.type === wantAudio && s.m3u8);
   const fallback   = sources.filter(s => s.m3u8 && !audioMatch.includes(s));
@@ -509,15 +520,10 @@ function rankSources(sources, wantAudio) {
 
   const scoreOf = s => {
     let score = 0;
-    // Prefer VidPlay first if setting on (works in your logs)
-    if (PREFER_VIDPLAY) {
-      if (/VidPlay/i.test(s.server)) score += 100;
-      if (/^HD/i.test(s.server)) score -= 50;
-    } else {
-      if (/^HD/i.test(s.server)) score += 100;
-      if (/Vidstream/i.test(s.server)) score += 50;
-    }
-    if (isBad(s.server)) score -= 200;
+    // Always prefer VidPlay if available as its CDN is robust
+    if (/VidPlay/i.test(s.server)) score += 100;
+    if (/Vidstream/i.test(s.server)) score += 50;
+    if (/^HD/i.test(s.server)) score -= 20;
     if (s.type === wantAudio) score += 10;
     return score;
   };
@@ -545,9 +551,7 @@ async function downloadAnime(idx,item,signal) {
   log(`Slot ${idx+1}: ${sources.length} sources: ${avail}`,'ok');
 
   const ordered = rankSources(sources, audio);
-  if (!ordered.length) throw new Error('No m3u8 sources');
-  const skipped = ordered.filter(s => isBad(s.server)).map(s=>s.server);
-  if (skipped.length) log(`Slot ${idx+1}: Deprioritizing recently-failed: ${skipped.join(', ')}`, 'warn');
+  if (!ordered.length) throw new Error('No HLS/m3u8 sources found.');
 
   const fn=sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${ordered[0].type}`)+'.ts';
   let lastErr=null;
@@ -555,17 +559,15 @@ async function downloadAnime(idx,item,signal) {
     const m=src.proxyUrl?(API+src.proxyUrl):src.m3u8;
     const ref=src.referer||'https://megaplay.buzz/';
     Slots[idx].serverName=src.server;Slots[idx].audioType=src.type;updateSlotUI(idx);
-    log(`Slot ${idx+1}: Trying ${src.server} (${src.type})...`,'dl');
+    log(`Slot ${idx+1}: Connecting to ${src.server} (${src.type})...`,'dl');
     try{
       await downloadHLS(idx,m,src.m3u8,ref,fn,signal);
       return;
     }catch(e){
       if(e.name==='AbortError')throw e;
       lastErr=e;
-      markBad(src.server);
-      log(`Slot ${idx+1}: ${src.server}: ${e.message} (marked bad ${BadServers[src.server].fails}x)`,'warn');
-      // small breather before next server to avoid instant re-hammer
-      await sleep(500 + Math.random()*500);
+      log(`Slot ${idx+1}: ${src.server} failed: ${e.message}. Trying next mirror...`,'warn');
+      await sleep(1000);
     }
   }
   throw lastErr||new Error('All sources failed');
@@ -573,11 +575,14 @@ async function downloadAnime(idx,item,signal) {
 
 async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
   Slots[idx].status='Fetching playlist...';updateSlotUI(idx);
-  let fetchUrl=m3u8Url;
-  if(!m3u8Url.includes('/api/proxy'))fetchUrl=API+'/api/proxy?url='+encodeURIComponent(m3u8Url)+'&referer='+encodeURIComponent(referer);
-  else if(m3u8Url.startsWith('/'))fetchUrl=API+m3u8Url;
+  
+  let resp;
+  try {
+    resp = await smartFetch(idx, m3u8Url, originalUrl, referer, false, signal);
+  } catch (e) {
+    throw new Error(`Manifest load failed: ${e.message}`);
+  }
 
-  const resp=await fetchWithRetry(fetchUrl, { signal }, MAX_RETRIES, `Slot ${idx+1} M3U8`);
   const txt=await resp.text();const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
   const resolveUrl=u=>{if(u.startsWith('/api/proxy'))return API+u;if(u.startsWith('http'))return u;const b=(originalUrl||m3u8Url).replace(/[^/]*$/,'');return b+u;};
 
@@ -590,16 +595,15 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
       }
     }
     if(!best){for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=lines[j+1];break;}}}
-    if(!best)throw new Error('No variants');
-    log(`Slot ${idx+1}: ${bestR}p`,'dl');
+    if(!best)throw new Error('No variant qualities found');
+    log(`Slot ${idx+1}: Selected quality ${bestR}p`,'dl');
     const rv=resolveUrl(best);
-    if(rv.includes('/api/proxy'))return downloadHLS(idx,rv,originalUrl,referer,filename,signal);
-    return downloadHLS(idx,API+'/api/proxy?url='+encodeURIComponent(rv)+'&referer='+encodeURIComponent(referer),rv,referer,filename,signal);
+    return downloadHLS(idx,rv,rv,referer,filename,signal);
   }
 
   const segs=lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);
-  if(!segs.length)throw new Error('No segments');
-  log(`Slot ${idx+1}: ${segs.length} segments (concurrency ${SEG_CONCURRENCY})`,'dl');
+  if(!segs.length)throw new Error('No segments found');
+  log(`Slot ${idx+1}: Loaded ${segs.length} fragments (Concurrency: ${SEG_CONCURRENCY})`,'dl');
   Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
 
   const segData=new Array(segs.length);
@@ -608,10 +612,9 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
 
   const fetchSeg=async si=>{
     let t=segs[si];
-    if(!t.includes('/api/proxy'))t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);
     try{
-      const r=await fetchWithRetry(t, { signal }, MAX_RETRIES, `seg ${si+1}`);
-      const b=await r.arrayBuffer();
+      const r = await smartFetch(idx, t, t, referer, true, signal);
+      const b = await r.arrayBuffer();
       segData[si]=new Uint8Array(b);
       Slots[idx].downloaded+=b.byteLength;
     }catch(e){
@@ -620,7 +623,7 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
       failedIdx.push(si);
     }
     done++;Slots[idx].segDone=done;trackSpeed(idx);
-    Slots[idx].status=`${done}/${segs.length} segments${failedIdx.length?` (${failedIdx.length} failed)`:''}`;
+    Slots[idx].status=`${done}/${segs.length} fragments${failedIdx.length?` (${failedIdx.length} failed)`:''}`;
     updateSlotUI(idx);updateStats();
   };
 
@@ -636,12 +639,10 @@ async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
     go();
   });
 
-  // Sanity check: if too many segments failed, bail so we don't produce a broken mp4
   const failRatio = failedIdx.length / segs.length;
-  if (failRatio > 0.05) {
-    throw new Error(`Too many failed segments (${failedIdx.length}/${segs.length}) — aborting to try next source`);
+  if (failRatio > 0.15) {
+    throw new Error(`Too many segments failed (${failedIdx.length}/${segs.length}). Retrying stream...`);
   }
-  if (failedIdx.length) log(`Slot ${idx+1}: ${failedIdx.length} segments missing, continuing`, 'warn');
 
   Slots[idx].status='Muxing standard MP4...';updateSlotUI(idx);
   const total=segData.reduce((a,c)=>a+c.byteLength,0);
@@ -688,7 +689,7 @@ async function testApi() {
 }
 
 loadCfg();
-log('StreamVault v6.1 ready','ok');
+log('StreamVault v6.2 ready','ok');
 log('API: '+(API||'same-origin')+' | Concurrency: '+SEG_CONCURRENCY+' | Retries: '+MAX_RETRIES,'api');
 if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel/Render','err');document.getElementById('setupBanner').classList.remove('hidden');}
 testApi();
