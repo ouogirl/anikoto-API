@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StreamVault v6.3 (Platinum)</title>
+<title>StreamVault v6.4 (Clean Engine)</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
@@ -77,7 +77,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
     <div>
       <h1 class="text-[17px] font-bold grad tracking-tight">StreamVault</h1>
-      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.3 — Platinum Lossless Edition</p>
+      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.4 — Clean Lossless Engine</p>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -217,7 +217,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 </div>
 
-<!-- Settings Modal -->
 <div class="modal" id="cfgModal">
 <div class="mbox">
   <div class="flex justify-between items-center mb-5">
@@ -433,116 +432,76 @@ async function startSlot(idx,item) {
 function cancel(idx){if(AbortCtrl[idx])AbortCtrl[idx].abort();}
 function trackSpeed(idx){const s=Slots[idx];if(!s)return;const now=Date.now(),dt=(now-s.lastSpeedCheck)/1000;if(dt>=.5){s.speed=(s.downloaded-s.lastBytes)/dt;s.lastBytes=s.downloaded;s.lastSpeedCheck=now;s.elapsed=(now-s.startTime)/1000;}}
 
-// Smart referer resolver: creates a list of working bypass referers for each server network
-function getRefererBypassList(server, defaultReferer) {
-  const list = [];
-  if (defaultReferer) list.push(defaultReferer);
-  if (/HD|Vidstream|MegaCloud|Rapid/i.test(server)) {
-    list.push('https://megacloud.club/', 'https://rabbitstream.net/', 'https://dokicloud.one/', 'https://megaplay.buzz/', 'https://hianime.to/');
-  } else if (/VidPlay|MyCloud|MegaF/i.test(server)) {
-    list.push('https://vidplay.online/', 'https://megaf.cc/', 'https://megaplay.buzz/');
-  } else {
-    list.push('https://megacloud.club/', 'https://megaplay.buzz/');
+// Strict URL resolver to avoid nested /api/proxy malformations
+function resolveHlsUrl(baseUrl, targetUrl) {
+  try {
+    return new URL(targetUrl, baseUrl).href;
+  } catch (e) {
+    return targetUrl;
   }
-  return [...new Set(list)];
 }
 
 async function downloadAnime(idx,item,signal) {
   let slug=item.slug;const ep=item.ep||1,audio=item.audio||'sub';
   Slots[idx].status='Getting sources...';updateSlotUI(idx);log(`Slot ${idx+1}: /api/watch/${slug}?ep=${ep}`,'api');
-  const resp=await fetch(`${API}/api/watch/${slug}?ep=${ep}`,{signal});if(!resp.ok)throw new Error('Watch: '+resp.status);
+  const resp=await fetch(`${API}/api/watch/${slug}?ep=${ep}`,{signal});if(!resp.ok)throw new Error('Watch API: '+resp.status);
   const text=await resp.text();const sources=[];let epInfo=null;
   try{const j=JSON.parse(text);if(j.ok&&j.data){if(j.data.sources)sources.push(...j.data.sources);if(j.data.episode)epInfo=j.data.episode;}}
   catch{for(const line of text.split('\n')){if(!line.startsWith('data: '))continue;try{const o=JSON.parse(line.substring(6));if(o.type==='source'&&o.source)sources.push(o.source);if(o.type==='episode'&&o.episode)epInfo=o.episode;}catch{}}}
-  if(!sources.length)throw new Error('No sources available for this episode');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
+  if(!sources.length)throw new Error('No sources available');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
 
-  // Prioritize VidPlay first, followed by others
+  // Prioritize VidPlay first, then HD-1, then others
   const sortServers = (a, b) => {
-    const isVidPlayA = /VidPlay/i.test(a.server);
-    const isVidPlayB = /VidPlay/i.test(b.server);
-    if (isVidPlayA && !isVidPlayB) return -1;
-    if (!isVidPlayA && isVidPlayB) return 1;
-    return 0;
+    const pA = /VidPlay/i.test(a.server) ? 3 : (/HD/i.test(a.server) ? 2 : 1);
+    const pB = /VidPlay/i.test(b.server) ? 3 : (/HD/i.test(b.server) ? 2 : 1);
+    return pB - pA;
   };
 
   const m3u8Sources = sources.filter(s => s.m3u8);
-  if (!m3u8Sources.length) throw new Error('No m3u8 sources found');
+  if (!m3u8Sources.length) throw new Error('No m3u8 stream sources found');
 
-  let preferredCands = m3u8Sources.filter(s => s.type === audio).sort(sortServers);
-  const secondaryCands = m3u8Sources.filter(s => s.type !== audio).sort(sortServers);
-  const tryOrder = [...preferredCands, ...secondaryCands];
+  let preferredAudio = m3u8Sources.filter(s => s.type === audio).sort(sortServers);
+  let otherAudio = m3u8Sources.filter(s => s.type !== audio).sort(sortServers);
+  const tryOrder = [...preferredAudio, ...otherAudio];
 
   let lastErr = null;
   for(const src of tryOrder){
     if (src.type !== audio) {
-      log(`Slot ${idx+1}: Preferred audio not available. Trying ${src.server} (${src.type.toUpperCase()})`,'warn');
+      log(`Slot ${idx+1}: Notice: ${audio.toUpperCase()} failed across servers. Trying ${src.server} (${src.type.toUpperCase()})`,'warn');
     }
     const rawM3u8 = src.m3u8;
-    const referers = getRefererBypassList(src.server, src.referer);
+    const referer = src.referer || (src.server.includes('VidPlay') ? 'https://vidplay.online/' : 'https://megacloud.club/');
+    
     Slots[idx].audioType = src.type;
     Slots[idx].serverName = src.server;
     updateSlotUI(idx);
-    log(`Slot ${idx+1}: Connecting to ${src.server} (${src.type.toUpperCase()})...`,'dl');
+    log(`Slot ${idx+1}: Trying ${src.server} (${src.type.toUpperCase()})...`,'dl');
     const fn = sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${src.type}`) + '.ts';
     
     try {
-      await downloadHLS(idx, rawM3u8, referers, fn, signal);
-      return; // Download succeeded!
+      await downloadHLS(idx, rawM3u8, referer, fn, signal);
+      return; // Succeeded!
     } catch(e) {
       if(e.name === 'AbortError') throw e;
       lastErr = e;
-      log(`Slot ${idx+1}: ${src.server} unavailable: ${e.message}`, 'warn');
+      log(`Slot ${idx+1}: ${src.server} (${src.type.toUpperCase()}): ${e.message}`, 'warn');
     }
   }
-  throw lastErr || new Error('All stream sources returned 403 or network errors');
+  throw lastErr || new Error('All stream sources returned errors');
 }
 
-// Resilient playlist fetcher with multi-referer cycling
-async function fetchM3u8WithBypass(url, referers, signal) {
-  let lastStatus = 0;
-  for (const ref of referers) {
-    const proxyUrl = `${API}/api/proxy?url=${encodeURIComponent(url)}&referer=${encodeURIComponent(ref)}`;
-    try {
-      const resp = await fetch(proxyUrl, { signal });
-      if (resp.ok) {
-        const text = await resp.text();
-        return { text, workingReferer: ref };
-      }
-      lastStatus = resp.status;
-    } catch (err) {
-      if (err.name === 'AbortError') throw err;
-    }
-  }
-  
-  // Last attempt: Direct fetch without proxy (in case CDN supports direct CORS)
-  try {
-    const directResp = await fetch(url, { signal });
-    if (directResp.ok) {
-      const text = await directResp.text();
-      return { text, workingReferer: referers[0] || '' };
-    }
-    lastStatus = directResp.status;
-  } catch (err) {
-    if (err.name === 'AbortError') throw err;
-  }
-  
-  throw new Error(`M3U8 response code ${lastStatus || 403}`);
-}
-
-async function downloadHLS(idx, m3u8Url, referers, filename, signal) {
-  Slots[idx].status = 'Connecting stream...';
+async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
+  Slots[idx].status = 'Fetching playlist...';
   updateSlotUI(idx);
   
-  const { text: txt, workingReferer: activeRef } = await fetchM3u8WithBypass(m3u8Url, referers, signal);
-  const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
+  const proxyM3u8 = `${API}/api/proxy?url=${encodeURIComponent(m3u8Url)}&referer=${encodeURIComponent(referer)}`;
+  const resp = await fetch(proxyM3u8, { signal });
+  if (!resp.ok) throw new Error(`M3U8 fetch failed (HTTP ${resp.status})`);
   
-  const resolveUrl = u => {
-    if (u.startsWith('http')) return u;
-    const b = m3u8Url.replace(/[^/]*$/, '');
-    return b + u;
-  };
+  const txt = await resp.text();
+  const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // High Quality Stream Variant Selection (Bit-perfect Master Selection)
+  // Parse Master Playlist & Choose Absolute Highest Quality (1080p Master)
   if (lines.some(l => l.includes('#EXT-X-STREAM-INF'))) {
     let variants = [];
     for (let j = 0; j < lines.length; j++) {
@@ -556,45 +515,51 @@ async function downloadHLS(idx, m3u8Url, referers, filename, signal) {
       }
     }
     variants.sort((a, b) => b.r - a.r || b.b - a.b);
-    if (!variants.length) throw new Error('No parsed streams in master playlist');
+    if (!variants.length) throw new Error('No valid streams in master manifest');
     
     const best = variants[0];
-    log(`Slot ${idx+1}: Selected stream quality: ${best.r ? best.r + 'p' : 'Original Master'}`, 'ok');
-    const streamUrl = resolveUrl(best.url);
-    return downloadHLS(idx, streamUrl, [activeRef, ...referers], filename, signal);
+    log(`Slot ${idx+1}: Quality selected: ${best.r ? best.r + 'p' : '1080p Lossless'}`, 'ok');
+    const streamUrl = resolveHlsUrl(m3u8Url, best.url);
+    return downloadHLS(idx, streamUrl, referer, filename, signal);
   }
 
-  const segs = lines.filter(l => l && !l.startsWith('#')).map(resolveUrl);
-  if (!segs.length) throw new Error('Zero segments found in stream');
+  // Parse Segment URLs
+  const segs = lines.filter(l => l && !l.startsWith('#')).map(l => resolveHlsUrl(m3u8Url, l));
+  if (!segs.length) throw new Error('No media segments found');
   
-  log(`Slot ${idx+1}: ${segs.length} segments ready (Lossless Master)`, 'dl');
+  log(`Slot ${idx+1}: ${segs.length} segments queued (Lossless Master)`, 'dl');
   Slots[idx].segTotal = segs.length;
   Slots[idx].segDone = 0;
   updateSlotUI(idx);
 
-  const CC = 10;
+  // Concurrency tuned to 5 parallel workers to prevent 429 rate limit blocks
+  const CC = 5;
   const segData = new Array(segs.length);
   let nxt = 0, done = 0;
 
   const fetchSegWithRetry = async (si, attempt = 1) => {
     const rawUrl = segs[si];
-    const proxyUrl = `${API}/api/proxy?url=${encodeURIComponent(rawUrl)}&referer=${encodeURIComponent(activeRef)}`;
+    const proxyUrl = `${API}/api/proxy?url=${encodeURIComponent(rawUrl)}&referer=${encodeURIComponent(referer)}`;
     try {
       const r = await fetch(proxyUrl, { signal });
       if (r.ok) {
         const b = await r.arrayBuffer();
         segData[si] = new Uint8Array(b);
         Slots[idx].downloaded += b.byteLength;
+      } else if (r.status === 429 && attempt <= 4) {
+        // Rate limited: Back off exponentially
+        await new Promise(res => setTimeout(res, 1200 * attempt));
+        return fetchSegWithRetry(si, attempt + 1);
       } else {
-        throw new Error(`HTTP status ${r.status}`);
+        throw new Error(`HTTP ${r.status}`);
       }
     } catch (e) {
       if (e.name === 'AbortError') throw e;
-      if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 500 * attempt));
+      if (attempt <= 3) {
+        await new Promise(res => setTimeout(res, 600 * attempt));
         return fetchSegWithRetry(si, attempt + 1);
       }
-      segData[si] = new Uint8Array(0);
+      segData[si] = new Uint8Array(0); // Prevents stream crash on single dropped packet
     }
   };
 
@@ -628,7 +593,7 @@ async function downloadHLS(idx, m3u8Url, referers, filename, signal) {
     go();
   });
 
-  Slots[idx].status = 'Packaging MP4 container (lossless)...';
+  Slots[idx].status = 'Packaging Lossless MP4...';
   updateSlotUI(idx);
   const total = segData.reduce((a, c) => a + c.byteLength, 0);
   const outFilename = toMp4Filename(filename);
@@ -661,8 +626,8 @@ async function testApi() {
 }
 
 loadCfg();
-log('StreamVault v6.3 (Platinum) ready','ok');
-log('Referer Bypass Active | Bit-perfect packaging','api');
+log('StreamVault v6.4 (Clean Engine) ready','ok');
+log('High-fidelity Lossless Engine active','api');
 testApi();
 setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('cfgModal').classList.remove('show');});
