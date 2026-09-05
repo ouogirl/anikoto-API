@@ -1,4 +1,4 @@
-Why are some not downloading, Using render.com. https://anikoto-api-hte0.onrender.com/streamvault.html . <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -283,8 +283,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
    ================================================================ */
 
 const ORIGIN = window.location.origin;
-const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('onrender.com') || ORIGIN.includes('localhost');
-let API = IS_DEPLOYED ? '' : 'https://anikoto-api-hte0.onrender.com';
+const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('localhost');
+let API = IS_DEPLOYED ? '' : 'https://anikoto-api-ten.vercel.app';
 let AUTO_SAVE = true;
 const Slots = [null, null];
 const AbortCtrl = [null, null];
@@ -483,205 +483,104 @@ async function resolveHiAnimeSlug(hiSlug) {
   const d=await r.json();if(!d.ok||!d.data?.results?.length)throw new Error(`"${t}" not found`);return d.data.results[0].slug;
 }
 
-async function fetchWithRetry(url, options = {}, label = 'request', retries = 4) {
-  let lastError = null;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    try {
-      const r = await fetch(url, options);
-      if (r.ok) return r;
-      const retryable = r.status === 408 || r.status === 425 || r.status === 429 || r.status >= 500;
-      if (!retryable || attempt === retries) {
-        const err = new Error(`${label}: ${r.status}`);
-        err.noRetry = !retryable;
-        throw err;
-      }
-      const retryAfter = Number(r.headers.get('Retry-After'));
-      const wait = Number.isFinite(retryAfter) && retryAfter > 0
-        ? Math.min(retryAfter * 1000, 15000)
-        : Math.min(800 * (2 ** attempt) + Math.random() * 400, 10000);
-      log(`Retrying ${label} in ${Math.ceil(wait / 1000)}s (${r.status})`, 'warn');
-      await new Promise(resolve => setTimeout(resolve, wait));
-    } catch (e) {
-      if (e.name === 'AbortError' || e.noRetry) throw e;
-      lastError = e;
-      if (attempt === retries) throw lastError;
-      const wait = Math.min(700 * (2 ** attempt) + Math.random() * 350, 8000);
-      await new Promise(resolve => setTimeout(resolve, wait));
-    }
-  }
-  throw lastError || new Error(`${label}: failed`);
-}
-
-function sourceScore(src, wantedAudio) {
-  let score = 0;
-  if (src.type === wantedAudio) score += 1000;
-  if (src.type === 'hsub') score -= 500;
-  if (/VidPlay/i.test(src.server)) score += 70;
-  if (/HD/i.test(src.server)) score += 30;
-  if (/Vidstream/i.test(src.server)) score -= 10;
-  return score;
-}
-
 async function downloadAnime(idx,item,signal) {
-  let slug=item.slug; const ep=item.ep||1, audio=item.audio||'sub';
-  if(item.platform==='hianime'){
-    Slots[idx].status='Searching...';updateSlotUI(idx);log(`Slot ${idx+1}: Searching...`,'api');
-    slug=await resolveHiAnimeSlug(slug);
-    const sr=await fetchWithRetry(`${API}/api/search?keyword=${encodeURIComponent(slug.replace(/-/g,' ').substring(0,20))}`, {signal}, 'Search');
-    if(sr.ok){const sd=await sr.json();if(sd.ok&&sd.data?.results?.[0])Slots[idx].title=sd.data.results[0].title;}
-    log(`Slot ${idx+1}: → ${Slots[idx].title||slug}`,'ok');
-  }
-
+  let slug=item.slug;const ep=item.ep||1,audio=item.audio||'sub';
+  if(item.platform==='hianime'){Slots[idx].status='Searching...';updateSlotUI(idx);log(`Slot ${idx+1}: Searching...`,'api');slug=await resolveHiAnimeSlug(slug);const sr=await fetch(`${API}/api/search?keyword=${encodeURIComponent(slug.replace(/-/g,' ').substring(0,20))}`);if(sr.ok){const sd=await sr.json();if(sd.ok&&sd.data?.results?.[0])Slots[idx].title=sd.data.results[0].title;}log(`Slot ${idx+1}: → ${Slots[idx].title||slug}`,'ok');}
   Slots[idx].status='Getting sources...';updateSlotUI(idx);log(`Slot ${idx+1}: /api/watch/${slug}?ep=${ep}`,'api');
-  const resp=await fetchWithRetry(`${API}/api/watch/${slug}?ep=${ep}`, {signal}, 'Watch', 2);
-  const text=await resp.text(); const sources=[]; let epInfo=null;
-  try{
-    const j=JSON.parse(text);
-    if(j.ok&&j.data){if(j.data.sources)sources.push(...j.data.sources);if(j.data.episode)epInfo=j.data.episode;}
-  } catch {
-    for(const line of text.split('\n')){
-      if(!line.startsWith('data: '))continue;
-      try{const o=JSON.parse(line.substring(6));if(o.type==='source'&&o.source)sources.push(o.source);if(o.type==='episode'&&o.episode)epInfo=o.episode;}catch{}
-    }
-  }
-  if(!sources.length)throw new Error('No sources');
-  if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
-  const avail=sources.filter(s=>s.m3u8).map(s=>`${s.server}(${s.type})`).join(', ');
-  log(`Slot ${idx+1}: ${sources.length} sources: ${avail}`,'ok');
-
-  let cands=sources.filter(s=>s.m3u8 && s.type===audio);
-  if(!cands.length){log(`Slot ${idx+1}: No "${audio}", using any playable source`,'warn');cands=sources.filter(s=>s.m3u8);}
-  if(!cands.length)throw new Error('No m3u8 sources');
-
-  // Prefer sources that are historically more reliable, but always fall back to every candidate.
-  cands=[...cands].sort((a,b)=>sourceScore(b,audio)-sourceScore(a,audio));
-  const fn=sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${audio}`)+'.ts';
-  let lastErr=null;
-  for(const src of cands){
-    const m=src.proxyUrl ? (src.proxyUrl.startsWith('http') ? src.proxyUrl : API+src.proxyUrl) : src.m3u8;
-    const ref=src.referer || 'https://vidtube.site/';
-    Slots[idx].serverName=src.server; Slots[idx].audioType=src.type; updateSlotUI(idx);
-    log(`Slot ${idx+1}: Trying ${src.server} (${src.type})...`,'dl');
-    try {
-      await downloadHLS(idx,m,src.m3u8,ref,fn,signal);
-      return;
-    } catch(e) {
-      if(e.name==='AbortError')throw e;
-      lastErr=e;
-      log(`Slot ${idx+1}: ${src.server}: ${e.message}`,'warn');
-    }
-  }
-  throw lastErr || new Error('All sources failed');
+  const resp=await fetch(`${API}/api/watch/${slug}?ep=${ep}`,{signal});if(!resp.ok)throw new Error('Watch: '+resp.status);
+  const text=await resp.text();const sources=[];let epInfo=null;
+  try{const j=JSON.parse(text);if(j.ok&&j.data){if(j.data.sources)sources.push(...j.data.sources);if(j.data.episode)epInfo=j.data.episode;}}
+  catch{for(const line of text.split('\n')){if(!line.startsWith('data: '))continue;try{const o=JSON.parse(line.substring(6));if(o.type==='source'&&o.source)sources.push(o.source);if(o.type==='episode'&&o.episode)epInfo=o.episode;}catch{}}}
+  if(!sources.length)throw new Error('No sources');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
+  const avail=sources.filter(s=>s.m3u8).map(s=>`${s.server}(${s.type})`).join(', ');log(`Slot ${idx+1}: ${sources.length} sources: ${avail}`,'ok');
+  let cands=sources.filter(s=>s.type===audio&&s.m3u8);if(!cands.length){log(`Slot ${idx+1}: No "${audio}", using any`,'warn');cands=sources.filter(s=>s.m3u8);}if(!cands.length)throw new Error('No m3u8 sources');
+  const pref=cands.find(s=>/^HD/i.test(s.server))||cands.find(s=>/Vidstream/i.test(s.server))||cands[0];
+  Slots[idx].audioType=pref.type;Slots[idx].serverName=pref.server;updateSlotUI(idx);log(`Slot ${idx+1}: ${pref.server} (${pref.type})`,'ok');
+  const fn=sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${pref.type}`)+'.ts';
+  const tryOrder=[pref,...cands.filter(s=>s!==pref)];let lastErr=null;
+  for(const src of tryOrder){const m=src.proxyUrl?(API+src.proxyUrl):src.m3u8;const ref=src.referer||'https://megaplay.buzz/';Slots[idx].serverName=src.server;updateSlotUI(idx);log(`Slot ${idx+1}: Trying ${src.server}...`,'dl');try{await downloadHLS(idx,m,src.m3u8,ref,fn,signal);return;}catch(e){if(e.name==='AbortError')throw e;lastErr=e;log(`Slot ${idx+1}: ${src.server}: ${e.message}`,'warn');}}
+  throw lastErr||new Error('All sources failed');
 }
 
 async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
   Slots[idx].status='Fetching playlist...';updateSlotUI(idx);
-
-  const proxyUrl = u => {
-    if (!u) return u;
-    if (u.includes('/api/proxy')) return u.startsWith('http') ? u : API+u;
-    return `${API}/api/proxy?url=${encodeURIComponent(u)}&referer=${encodeURIComponent(referer)}`;
-  };
-  const fetchUrl = m3u8Url.includes('/api/proxy')
-    ? (m3u8Url.startsWith('/') ? API+m3u8Url : m3u8Url)
-    : proxyUrl(m3u8Url);
-
-  const resp=await fetchWithRetry(fetchUrl,{signal},'M3U8',3);
-  const txt=await resp.text();
-  const lines=txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-
-  const baseUrl = (() => {
-    try { return new URL(originalUrl || m3u8Url); } catch { return null; }
-  })();
+  let fetchUrl=m3u8Url;
+  if(!m3u8Url.includes('/api/proxy'))fetchUrl=API+'/api/proxy?url='+encodeURIComponent(m3u8Url)+'&referer='+encodeURIComponent(referer);
+  else if(m3u8Url.startsWith('/'))fetchUrl=API+m3u8Url;
+  
+  const resp=await fetch(fetchUrl,{signal});if(!resp.ok)throw new Error('M3U8: '+resp.status);
+  const txt=await resp.text();const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+  
+  // Safely resolve nested or relative paths by checking if proxy rewritten it to a protocol relative string
   const resolveUrl = u => {
-    if (u.startsWith('/api/proxy')) return API+u;
-    if (u.startsWith('http://') || u.startsWith('https://')) return u;
-    if (baseUrl) return new URL(u, baseUrl).href;
-    return (originalUrl||m3u8Url).replace(/[^/]*$/,'') + u;
+    if (u.includes('/api/proxy?url=')) { return API + u.substring(u.indexOf('/api/proxy?url=')); }
+    if (u.startsWith('http')) return u;
+    if (u.startsWith('//')) return 'https:' + u;
+    const b = (originalUrl || m3u8Url).replace(/[^/]*$/, '');
+    return b + u;
   };
 
-  // Master playlist: pick the highest available resolution, then retry the complete child playlist through the proxy.
-  if(lines.some(l=>l.startsWith('#EXT-X-STREAM-INF'))){
-    let best=null,bestR=-1;
+  if(lines.some(l=>l.includes('#EXT-X-STREAM-INF'))){
+    let best=null,bestR=0;
     for(let j=0;j<lines.length;j++){
-      if(!lines[j].startsWith('#EXT-X-STREAM-INF'))continue;
-      const rm=lines[j].match(/RESOLUTION=(\d+)x(\d+)/i);
-      const r=rm ? Number(rm[2]) : 0;
-      const next=lines[j+1];
-      if(next && !next.startsWith('#') && r>=bestR){bestR=r;best=next;}
+      if(lines[j].startsWith('#EXT-X-STREAM-INF')){
+        const rm=lines[j].match(/RESOLUTION=\d+x(\d+)/);
+        const r=rm?+rm[1]:0;
+        if(lines[j+1]&&!lines[j+1].startsWith('#')&&r>=bestR){bestR=r;best=lines[j+1];}
+      }
+    }
+    if(!best){
+      for(let j=0;j<lines.length;j++){
+        if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=lines[j+1];break;}
+      }
     }
     if(!best)throw new Error('No variants');
+    log(`Slot ${idx+1}: ${bestR}p`,'dl');
     const rv=resolveUrl(best);
-    log(`Slot ${idx+1}: ${bestR>0?bestR+'p':'best quality'}`,'dl');
-    return downloadHLS(idx,rv,rv,referer,filename,signal);
-  }
-
-  // HLS may contain EXT-X-MAP or key URIs. We only download media segment URIs here.
-  const segs=lines.filter(l=>!l.startsWith('#')).map(resolveUrl);
-  if(!segs.length)throw new Error('No segments');
-  log(`Slot ${idx+1}: ${segs.length} segments`,'dl');
-  Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
-
-  // Lower concurrency prevents Render/upstream 429s. Failed segments are retried instead of silently becoming zero-byte data.
-  const CC=3, RETRIES=4, segData=new Array(segs.length);
-  let nxt=0,done=0,failures=0;
-
-  const fetchSeg = async si => {
-    let lastErr=null;
-    for(let attempt=0;attempt<=RETRIES;attempt++){
-      if(signal.aborted)throw new DOMException('Aborted','AbortError');
-      try{
-        const t=proxyUrl(segs[si]);
-        const r=await fetchWithRetry(t,{signal},`segment ${si+1}`,2);
-        const b=await r.arrayBuffer();
-        if(!b.byteLength)throw new Error('empty segment');
-        return new Uint8Array(b);
-      }catch(e){
-        if(e.name==='AbortError')throw e;
-        lastErr=e;
-        if(attempt<RETRIES){
-          const wait=Math.min(500*(2**attempt)+Math.random()*400,8000);
-          await new Promise(resolve=>setTimeout(resolve,wait));
-        }
-      }
+    
+    // Properly extract real base origin to stop breaking nested segments
+    if(rv.includes('/api/proxy?url=')){
+      let nextOrig = rv; 
+      try { nextOrig = decodeURIComponent(rv.split('url=')[1].split('&')[0]); } catch(e){}
+      return downloadHLS(idx,rv,nextOrig,referer,filename,signal);
     }
-    throw lastErr || new Error(`segment ${si+1} failed`);
+    return downloadHLS(idx,API+'/api/proxy?url='+encodeURIComponent(rv)+'&referer='+encodeURIComponent(referer),rv,referer,filename,signal);
+  }
+  
+  const segs=lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);if(!segs.length)throw new Error('No segments');
+  log(`Slot ${idx+1}: ${segs.length} segments`,'dl');Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
+  
+  const CC=10,segData=new Array(segs.length);let nxt=0,done=0;
+  const fetchSeg=async si=>{
+    let t=segs[si];
+    if(!t.includes('/api/proxy')) t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);
+    try{
+      const r=await fetch(t,{signal});
+      if(r.ok){const b=await r.arrayBuffer();segData[si]=new Uint8Array(b);Slots[idx].downloaded+=b.byteLength;}
+      else segData[si]=new Uint8Array(0);
+    }catch(e){if(e.name==='AbortError')throw e;segData[si]=new Uint8Array(0);}
+    done++;Slots[idx].segDone=done;trackSpeed(idx);Slots[idx].status=`${done}/${segs.length} segments...`;updateSlotUI(idx);updateStats();
   };
-
+  
   await new Promise((res,rej)=>{
-    let active=0,finished=false;
-    const pump=()=>{
-      if(finished)return;
-      while(active<CC && nxt<segs.length){
-        const si=nxt++; active++;
-        fetchSeg(si).then(b=>{
-          segData[si]=b; Slots[idx].downloaded+=b.byteLength;
-        }).catch(e=>{
-          failures++; segData[si]=null;
-          // One failed segment makes this source unusable; moving to another source is safer than creating a corrupt file.
-          if(!finished){finished=true;rej(new Error(`segment ${si+1}/${segs.length}: ${e.message}`));}
-        }).finally(()=>{
-          active--; done++; Slots[idx].segDone=done; trackSpeed(idx);
-          Slots[idx].status=`${done}/${segs.length} segments${failures?' — retrying/source may fail':''}...`;
-          updateSlotUI(idx);updateStats();
-          if(!finished && done>=segs.length){finished=true;res();} else if(!finished)pump();
-        });
+    let act=0;
+    const go=()=>{
+      while(act<CC&&nxt<segs.length){
+        if(signal.aborted){rej(new DOMException('Aborted','AbortError'));return;}
+        const si=nxt++;act++;
+        fetchSeg(si).then(()=>{act--;if(done>=segs.length)res();else go();}).catch(rej);
       }
     };
-    pump();
+    go();
   });
-
-  if(segData.some(x=>!x?.byteLength))throw new Error('Incomplete segment set');
+  
   Slots[idx].status='Muxing standard MP4...';updateSlotUI(idx);
   const total=segData.reduce((a,c)=>a+c.byteLength,0);
   const outFilename=toMp4Filename(filename);
   const blob=await transmuxTsToMp4(segData);
-  log(`Slot ${idx+1}: OK ${fmtBytes(total)} TS -> ${fmtBytes(blob.size)} standard MP4 (H.264+AAC)`,'ok');
-  toast(`Downloaded: ${outFilename}`);
+  log(`Slot ${idx+1}: OK ${fmtBytes(total)} TS -> ${fmtBytes(blob.size)} standard MP4 (H.264+AAC)`,'ok');toast(`Downloaded: ${outFilename}`);
   if(AUTO_SAVE)triggerBrowserDownload(blob,outFilename);
-  Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:outFilename,size:blob.size,blob});
-  DoneCount++;TotalBytes+=blob.size;renderDone();updateStats();
+  Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:outFilename,size:blob.size,blob});DoneCount++;TotalBytes+=blob.size;renderDone();updateStats();
 }
 
 async function downloadDirect(idx,url,title,signal) {
