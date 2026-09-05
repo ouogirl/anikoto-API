@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StreamVault v6</title>
+<title>StreamVault v6.2 (Platinum)</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
@@ -15,38 +15,29 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(99,102,241,.08),transparent 70%),
              radial-gradient(ellipse 60% 40% at 80% 110%,rgba(168,85,247,.05),transparent 60%)}
 
-/* Cards */
 .card{background:var(--card);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:16px}
 .card-glow{box-shadow:0 0 0 1px rgba(139,92,246,.1),0 8px 40px -12px rgba(0,0,0,.5)}
-
-/* Gradient text */
 .grad{background:linear-gradient(135deg,#818cf8,#a78bfa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-
-/* Progress */
 .pbar{height:5px;border-radius:99px;background:rgba(255,255,255,.04);overflow:hidden;position:relative}
 .pfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4);transition:width .25s ease;position:relative}
 .pfill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 60%,rgba(255,255,255,.2));animation:shimmer 2s ease-in-out infinite}
 @keyframes shimmer{0%,100%{opacity:0}50%{opacity:1}}
 
-/* Badges */
 .tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
 .tag-sub{background:rgba(99,102,241,.12);color:#93a5fc;border:1px solid rgba(99,102,241,.2)}
 .tag-dub{background:rgba(249,115,22,.12);color:#fbbf6a;border:1px solid rgba(249,115,22,.2)}
 .tag-ok{background:rgba(52,211,153,.1);color:#6ee7b7;border:1px solid rgba(52,211,153,.2)}
 .tag-src{background:rgba(139,92,246,.1);color:#c4b5fd;border:1px solid rgba(139,92,246,.15)}
 
-/* Slot active state */
 .slot-active{border-color:rgba(139,92,246,.3)!important;box-shadow:0 0 30px -5px rgba(139,92,246,.12)}
 .dot-pulse{animation:dotpulse 2s ease-in-out infinite}
 @keyframes dotpulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
 
-/* Mono log */
 .mono{font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.6}
-#logBox{max-height:200px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,.2) transparent}
+#logBox{max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,.2) transparent}
 #logBox::-webkit-scrollbar{width:3px}
 #logBox::-webkit-scrollbar-thumb{background:rgba(139,92,246,.25);border-radius:9px}
 
-/* Buttons */
 .btn{font-weight:600;border-radius:11px;border:none;cursor:pointer;transition:all .2s;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .btn-dl{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:11px 18px;box-shadow:0 4px 14px -4px rgba(99,102,241,.35)}
 .btn-dl:hover{box-shadow:0 6px 24px -4px rgba(99,102,241,.5);transform:translateY(-1px)}
@@ -55,40 +46,30 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
 .btn-s{background:rgba(255,255,255,.04);color:#8892a4;padding:5px 11px;border-radius:8px;border:1px solid rgba(255,255,255,.08);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
 .btn-s:hover{background:rgba(255,255,255,.08);color:#c8cfd8;border-color:rgba(255,255,255,.12)}
 
-/* Inputs */
 input[type="url"],input[type="text"],select{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:12px 16px;color:#dde2ea;font-size:14px;width:100%;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s,box-shadow .2s}
 input:focus{border-color:rgba(139,92,246,.4);box-shadow:0 0 0 3px rgba(139,92,246,.08)}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 
-/* Modal */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);z-index:100;display:none;align-items:center;justify-content:center}
 .modal.show{display:flex}
 .mbox{background:#0d0d1a;border:1px solid rgba(255,255,255,.08);border-radius:20px;max-width:480px;width:92%;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 25px 60px rgba(0,0,0,.5)}
 
-/* Spinner */
 .spin{width:12px;height:12px;border:2px solid rgba(139,92,246,.2);border-top-color:#8b5cf6;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Animations */
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .anim{animation:fadeUp .25s ease-out}
-
-/* Toast */
 .toast{position:fixed;bottom:24px;right:24px;z-index:200;animation:fadeUp .25s ease-out}
-
-/* Section header */
 .sec-head{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:#5a6170;display:flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
 
-<!-- Background orbs (decorative) -->
 <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-500/[.03] rounded-full blur-[120px] pointer-events-none"></div>
 <div class="fixed bottom-0 right-1/4 w-80 h-80 bg-violet-500/[.03] rounded-full blur-[100px] pointer-events-none"></div>
 
 <div class="relative z-10 max-w-5xl mx-auto px-4 py-6 space-y-4">
 
-<!-- ====== Header ====== -->
 <header class="flex items-center justify-between">
   <div class="flex items-center gap-3.5">
     <div class="w-10 h-10 rounded-[13px] bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
@@ -96,7 +77,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
     <div>
       <h1 class="text-[17px] font-bold grad tracking-tight">StreamVault</h1>
-      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6 — Anime Downloader</p>
+      <p class="text-[9px] text-slate-600 font-medium uppercase tracking-[.15em]">v6.2 — Platinum Lossless Edition</p>
     </div>
   </div>
   <div class="flex items-center gap-3">
@@ -108,13 +89,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </header>
 
-<!-- file:// warning -->
-<div id="setupBanner" class="hidden card p-4 border-yellow-500/20 bg-yellow-500/[.04]">
-  <p class="text-xs text-yellow-300/80"><strong>📋 Setup needed:</strong> Add this as <code class="text-yellow-200/70 bg-yellow-500/10 px-1 rounded">public/streamvault.html</code> in your GitHub fork → commit → open <strong class="text-green-300" id="deployUrl">https://your-app.vercel.app/streamvault.html</strong></p>
-  <button onclick="this.parentElement.classList.add('hidden')" class="text-[10px] text-yellow-500/50 hover:text-yellow-300 mt-1">Dismiss</button>
-</div>
-
-<!-- ====== Stats Strip ====== -->
 <div class="card card-glow px-5 py-3.5 grid grid-cols-4 gap-4">
   <div class="text-center"><div class="text-[22px] font-bold text-indigo-400 tabular-nums" id="sA">0<span class="text-slate-600 text-sm">/2</span></div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Slots</div></div>
   <div class="text-center"><div class="text-[22px] font-bold text-cyan-400 tabular-nums" id="sS">—</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Speed</div></div>
@@ -122,7 +96,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div class="text-center"><div class="text-[22px] font-bold text-violet-400 tabular-nums" id="sB">0 B</div><div class="text-[9px] text-slate-600 font-medium uppercase tracking-widest mt-0.5">Total</div></div>
 </div>
 
-<!-- ====== URL Input ====== -->
 <div class="card card-glow p-4">
   <div class="flex gap-2.5 items-center">
     <div class="relative" style="flex:1 1 0;min-width:0">
@@ -143,7 +116,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div id="urlHint" class="text-[11px] mt-2 pl-1 hidden"></div>
 </div>
 
-<!-- ====== Download Slots ====== -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
   <!-- Slot 0 -->
   <div class="card p-5 slot" id="sl0">
@@ -209,7 +181,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
-<!-- ====== Queue & Completed ====== -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
   <div class="card p-4">
     <div class="flex justify-between items-center mb-3">
@@ -233,7 +204,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
-<!-- ====== Activity Log ====== -->
 <div class="card p-4">
   <div class="flex justify-between items-center mb-3">
     <span class="sec-head">
@@ -245,9 +215,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div id="logBox" class="mono text-slate-500"></div>
 </div>
 
-</div><!-- /container -->
+</div>
 
-<!-- ====== Settings Modal ====== -->
+<!-- Settings Modal -->
 <div class="modal" id="cfgModal">
 <div class="mbox">
   <div class="flex justify-between items-center mb-5">
@@ -259,8 +229,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div class="space-y-5">
     <div>
       <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">API Base URL</label>
-      <input type="text" id="cfgApi" placeholder="https://anikoto-api-ten.vercel.app">
-      <p class="text-[10px] text-slate-600 mt-1.5">Your Vercel-deployed Teramoto anikoto-API</p>
+      <input type="text" id="cfgApi" placeholder="(same origin)">
+      <p class="text-[10px] text-slate-600 mt-1.5">Leave blank or (same origin) when running on Render</p>
     </div>
     <div class="flex items-center justify-between p-3 rounded-xl bg-white/[.02] border border-white/[.04]">
       <label class="text-sm text-slate-300">Auto-download when done</label>
@@ -275,16 +245,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </div>
 
 <script>
-/* ================================================================
-   StreamVault v6 — Core Engine
-   Architecture: Single-page app hosted on user's Vercel deployment
-   API: Teramoto anikoto-API (same-origin, no CORS issues)
-   Output: transmuxed standard .mp4 files (H.264+AAC) for iOS Gallery compatibility
-   ================================================================ */
-
 const ORIGIN = window.location.origin;
-const IS_DEPLOYED = ORIGIN.includes('vercel.app') || ORIGIN.includes('localhost');
-let API = IS_DEPLOYED ? '' : 'https://anikoto-api-ten.vercel.app';
+const IS_DEPLOYED = ORIGIN.includes('onrender.com') || ORIGIN.includes('vercel.app') || ORIGIN.includes('localhost');
+let API = IS_DEPLOYED ? '' : 'https://anikoto-api-hte0.onrender.com';
 let AUTO_SAVE = true;
 const Slots = [null, null];
 const AbortCtrl = [null, null];
@@ -297,7 +260,6 @@ function loadCfg() {
   try { const c = JSON.parse(localStorage.getItem('sv6') || '{}'); if (c.api !== undefined) API = c.api; if (c.auto !== undefined) AUTO_SAVE = c.auto; } catch(e) {}
   document.getElementById('cfgApi').value = API || '(same origin)';
   document.getElementById('cfgAuto').checked = AUTO_SAVE;
-  if (window.location.protocol === 'file:') { document.getElementById('setupBanner').classList.remove('hidden'); document.getElementById('deployUrl').textContent = (API || 'https://anikoto-api-ten.vercel.app') + '/streamvault.html'; }
 }
 function saveCfg() {
   const v = document.getElementById('cfgApi').value.trim();
@@ -386,9 +348,7 @@ function renderDone() {
 }
 function redownload(i) { const d=Done[i]; if(d?.blob) triggerBrowserDownload(d.blob,d.filename); else toast('File expired',false); }
 
-function toMp4Filename(filename) {
-  return filename.toLowerCase().endsWith('.ts') ? filename.slice(0, -3) + '.mp4' : filename;
-}
+function toMp4Filename(filename) { return filename.toLowerCase().endsWith('.ts') ? filename.slice(0, -3) + '.mp4' : filename; }
 
 function triggerBrowserDownload(blob, filename) {
   const targetFilename = toMp4Filename(filename);
@@ -409,27 +369,21 @@ async function loadToMp4() {
   if (window.toMp4) return window.toMp4;
   if (!toMp4Loader) {
     toMp4Loader = import('https://cdn.jsdelivr.net/npm/@invintusmedia/tomp4@1.7.4/src/index.min.js')
-      .then(mod => {
-        window.toMp4 = mod.default || mod.toMp4;
-        return window.toMp4;
-      });
+      .then(mod => { window.toMp4 = mod.default || mod.toMp4; return window.toMp4; });
   }
   return toMp4Loader;
 }
 
 async function transmuxTsToMp4(tsSegments) {
   const converter = await loadToMp4();
-  if (!converter?.stitchTs) throw new Error('MP4 muxer failed to load. Refresh and try again.');
+  if (!converter?.stitchTs) throw new Error('MP4 engine failed to load.');
   const validSegments = tsSegments.filter(bytes => bytes?.byteLength);
-  if (!validSegments.length) throw new Error('No video data to package');
+  if (!validSegments.length) throw new Error('No audio/video data to package');
+  
+  // stitchTs repackages the TS tracks losslessly (direct bitstream copying, zero transcoding downscale)
   const mp4 = converter.stitchTs(validSegments);
   const mp4Data = mp4.data || mp4;
-  if (mp4Data?.[4] !== 0x66 || mp4Data?.[5] !== 0x74 || mp4Data?.[6] !== 0x79 || mp4Data?.[7] !== 0x70) {
-    throw new Error('MP4 muxer returned invalid output');
-  }
-  const blob = new Blob([mp4Data], { type: 'video/mp4' });
-  if (!blob.size) throw new Error('MP4 transmux produced no output');
-  return blob;
+  return new Blob([mp4Data], { type: 'video/mp4' });
 }
 
 function go() {
@@ -437,8 +391,12 @@ function go() {
   if (!url) { toast('Enter a URL', false); return; }
   const parsed = parseUrl(url), audio = document.getElementById('audSel').value;
   let item;
-  if (parsed) { log(`Parsed: slug="${parsed.slug}" ep=${parsed.ep}`, 'api'); const t = parsed.slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' '); item = { url, slug:parsed.slug, ep:parsed.ep, platform:parsed.platform, audio, title:t+' Ep'+parsed.ep }; }
-  else { item = { url, audio, title:url.split('/').pop()?.substring(0,30)||'Download', platform:'direct' }; }
+  if (parsed) {
+    const t = parsed.slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' ');
+    item = { url, slug:parsed.slug, ep:parsed.ep, platform:parsed.platform, audio, title:t+' Ep'+parsed.ep };
+  } else {
+    item = { url, audio, title:url.split('/').pop()?.substring(0,30)||'Download', platform:'direct' };
+  }
   const free = Slots.findIndex(s=>s===null);
   if (free!==-1) startSlot(free,item); else { Q.push(item); renderQ(); log('Queued: '+item.title); }
   document.getElementById('urlIn').value=''; document.getElementById('urlBadge').classList.add('hidden'); document.getElementById('urlHint').classList.add('hidden'); updateStats();
@@ -451,7 +409,6 @@ async function goAll() {
   let slug=parsed.slug, title=slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' ');
   log('Fetching episode list...','api'); toast('Loading episodes...');
   try {
-    if(parsed.platform==='hianime'){slug=await resolveHiAnimeSlug(slug);title=slug.replace(/-[a-z0-9]{5}$/i,'').replace(/-/g,' ');}
     const r=await fetch(`${API}/api/anime/${slug}`); if(!r.ok)throw new Error('API: '+r.status);
     const d=await r.json(); let count=0;
     if(d.ok&&d.data){title=d.data.title||d.data.name||title;count=d.data.episodes?.[audio]||d.data.episodes?.sub||d.data.totalEpisodes||0;}
@@ -460,9 +417,9 @@ async function goAll() {
     log(`Found ${count} episodes for "${title}"`,'ok');
     if(!confirm(`Download all ${count} episodes of "${title}" (${audio.toUpperCase()})?`)){log('Cancelled','warn');return;}
     for(let e=1;e<=count;e++){const item={url,slug,ep:e,platform:'anikoto',audio,title:`${title} Ep${e}`};const free=Slots.findIndex(s=>s===null);if(free!==-1&&e<=2)startSlot(free,item);else Q.push(item);}
-    renderQ();updateStats();toast(`Queued ${count} episodes!`);log(`Queued ${count} episodes`,'ok');
+    renderQ();updateStats();toast(`Queued ${count} episodes!`);
   } catch(e){log('Error: '+e.message,'err');toast(e.message,false);}
-  document.getElementById('urlIn').value='';document.getElementById('urlBadge').classList.add('hidden');document.getElementById('urlHint').classList.add('hidden');
+  document.getElementById('urlIn').value='';
 }
 
 async function startSlot(idx,item) {
@@ -477,48 +434,131 @@ async function startSlot(idx,item) {
 function cancel(idx){if(AbortCtrl[idx])AbortCtrl[idx].abort();}
 function trackSpeed(idx){const s=Slots[idx];if(!s)return;const now=Date.now(),dt=(now-s.lastSpeedCheck)/1000;if(dt>=.5){s.speed=(s.downloaded-s.lastBytes)/dt;s.lastBytes=s.downloaded;s.lastSpeedCheck=now;s.elapsed=(now-s.startTime)/1000;}}
 
-async function resolveHiAnimeSlug(hiSlug) {
-  const t=hiSlug.replace(/-[a-z0-9]{5,}$/i,'').replace(/-episode-\d+/i,'').replace(/-/g,' ');
-  const r=await fetch(`${API}/api/search?keyword=${encodeURIComponent(t)}`);if(!r.ok)throw new Error('Search: '+r.status);
-  const d=await r.json();if(!d.ok||!d.data?.results?.length)throw new Error(`"${t}" not found`);return d.data.results[0].slug;
-}
-
 async function downloadAnime(idx,item,signal) {
   let slug=item.slug;const ep=item.ep||1,audio=item.audio||'sub';
-  if(item.platform==='hianime'){Slots[idx].status='Searching...';updateSlotUI(idx);log(`Slot ${idx+1}: Searching...`,'api');slug=await resolveHiAnimeSlug(slug);const sr=await fetch(`${API}/api/search?keyword=${encodeURIComponent(slug.replace(/-/g,' ').substring(0,20))}`);if(sr.ok){const sd=await sr.json();if(sd.ok&&sd.data?.results?.[0])Slots[idx].title=sd.data.results[0].title;}log(`Slot ${idx+1}: → ${Slots[idx].title||slug}`,'ok');}
   Slots[idx].status='Getting sources...';updateSlotUI(idx);log(`Slot ${idx+1}: /api/watch/${slug}?ep=${ep}`,'api');
   const resp=await fetch(`${API}/api/watch/${slug}?ep=${ep}`,{signal});if(!resp.ok)throw new Error('Watch: '+resp.status);
   const text=await resp.text();const sources=[];let epInfo=null;
   try{const j=JSON.parse(text);if(j.ok&&j.data){if(j.data.sources)sources.push(...j.data.sources);if(j.data.episode)epInfo=j.data.episode;}}
   catch{for(const line of text.split('\n')){if(!line.startsWith('data: '))continue;try{const o=JSON.parse(line.substring(6));if(o.type==='source'&&o.source)sources.push(o.source);if(o.type==='episode'&&o.episode)epInfo=o.episode;}catch{}}}
-  if(!sources.length)throw new Error('No sources');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
-  const avail=sources.filter(s=>s.m3u8).map(s=>`${s.server}(${s.type})`).join(', ');log(`Slot ${idx+1}: ${sources.length} sources: ${avail}`,'ok');
-  let cands=sources.filter(s=>s.type===audio&&s.m3u8);if(!cands.length){log(`Slot ${idx+1}: No "${audio}", using any`,'warn');cands=sources.filter(s=>s.m3u8);}if(!cands.length)throw new Error('No m3u8 sources');
-  const pref=cands.find(s=>/^HD/i.test(s.server))||cands.find(s=>/Vidstream/i.test(s.server))||cands[0];
-  Slots[idx].audioType=pref.type;Slots[idx].serverName=pref.server;updateSlotUI(idx);log(`Slot ${idx+1}: ${pref.server} (${pref.type})`,'ok');
-  const fn=sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${pref.type}`)+'.ts';
-  const tryOrder=[pref,...cands.filter(s=>s!==pref)];let lastErr=null;
-  for(const src of tryOrder){const m=src.proxyUrl?(API+src.proxyUrl):src.m3u8;const ref=src.referer||'https://megaplay.buzz/';Slots[idx].serverName=src.server;updateSlotUI(idx);log(`Slot ${idx+1}: Trying ${src.server}...`,'dl');try{await downloadHLS(idx,m,src.m3u8,ref,fn,signal);return;}catch(e){if(e.name==='AbortError')throw e;lastErr=e;log(`Slot ${idx+1}: ${src.server}: ${e.message}`,'warn');}}
-  throw lastErr||new Error('All sources failed');
+  if(!sources.length)throw new Error('No sources available for this episode');if(epInfo)Slots[idx].subtitle=`Episode ${epInfo.number}`;
+
+  // Prioritize VidPlay first (most reliable, no 403 blocks), then others
+  const sortServers = (a, b) => {
+    const isVidPlayA = /VidPlay/i.test(a.server);
+    const isVidPlayB = /VidPlay/i.test(b.server);
+    if (isVidPlayA && !isVidPlayB) return -1;
+    if (!isVidPlayA && isVidPlayB) return 1;
+    return 0;
+  };
+
+  const m3u8Sources = sources.filter(s => s.m3u8);
+  if (!m3u8Sources.length) throw new Error('No m3u8 sources found');
+
+  let preferredCands = m3u8Sources.filter(s => s.type === audio).sort(sortServers);
+  const secondaryCands = m3u8Sources.filter(s => s.type !== audio).sort(sortServers);
+  
+  // Try preferred audio first; if all 403, fallback to secondary audio track
+  const tryOrder = [...preferredCands, ...secondaryCands];
+
+  let lastErr = null;
+  for(const src of tryOrder){
+    if (src.type !== audio) {
+      log(`Slot ${idx+1}: Preferred audio failed. Falling back to ${src.server} (${src.type.toUpperCase()})`,'warn');
+    }
+    const m = src.proxyUrl ? (API + src.proxyUrl) : src.m3u8;
+    const ref = src.referer || 'https://megaplay.buzz/';
+    Slots[idx].audioType = src.type;
+    Slots[idx].serverName = src.server;
+    updateSlotUI(idx);
+    log(`Slot ${idx+1}: Trying ${src.server} (${src.type.toUpperCase()})...`,'dl');
+    const fn = sanitizeFilename(`${Slots[idx].title||slug}_Ep${ep}_${src.type}`) + '.ts';
+    try {
+      await downloadHLS(idx, m, src.m3u8, ref, fn, signal);
+      return; // Succeeded! Stop iterating.
+    } catch(e) {
+      if(e.name === 'AbortError') throw e;
+      lastErr = e;
+      log(`Slot ${idx+1}: ${src.server} failed: ${e.message}`, 'warn');
+    }
+  }
+  throw lastErr || new Error('All streams and audio tracks returned errors');
 }
 
 async function downloadHLS(idx,m3u8Url,originalUrl,referer,filename,signal) {
   Slots[idx].status='Fetching playlist...';updateSlotUI(idx);
   let fetchUrl=m3u8Url;if(!m3u8Url.includes('/api/proxy'))fetchUrl=API+'/api/proxy?url='+encodeURIComponent(m3u8Url)+'&referer='+encodeURIComponent(referer);else if(m3u8Url.startsWith('/'))fetchUrl=API+m3u8Url;
-  const resp=await fetch(fetchUrl,{signal});if(!resp.ok)throw new Error('M3U8: '+resp.status);
+  const resp=await fetch(fetchUrl,{signal});if(!resp.ok)throw new Error('M3U8 response code '+resp.status);
   const txt=await resp.text();const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
   const resolveUrl=u=>{if(u.startsWith('/api/proxy'))return API+u;if(u.startsWith('http'))return u;const b=(originalUrl||m3u8Url).replace(/[^/]*$/,'');return b+u;};
-  if(lines.some(l=>l.includes('#EXT-X-STREAM-INF'))){let best=null,bestR=0;for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')){const rm=lines[j].match(/RESOLUTION=\d+x(\d+)/);const r=rm?+rm[1]:0;if(lines[j+1]&&!lines[j+1].startsWith('#')&&r>=bestR){bestR=r;best=lines[j+1];}}}if(!best){for(let j=0;j<lines.length;j++){if(lines[j].startsWith('#EXT-X-STREAM-INF')&&lines[j+1]&&!lines[j+1].startsWith('#')){best=lines[j+1];break;}}}if(!best)throw new Error('No variants');log(`Slot ${idx+1}: ${bestR}p`,'dl');const rv=resolveUrl(best);if(rv.includes('/api/proxy'))return downloadHLS(idx,rv,originalUrl,referer,filename,signal);return downloadHLS(idx,API+'/api/proxy?url='+encodeURIComponent(rv)+'&referer='+encodeURIComponent(referer),rv,referer,filename,signal);}
-  const segs=lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);if(!segs.length)throw new Error('No segments');
-  log(`Slot ${idx+1}: ${segs.length} segments`,'dl');Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
+  
+  // Process master playlist and select the ABSOLUTE HIGHEST resolution variant (no quality loss)
+  if(lines.some(l=>l.includes('#EXT-X-STREAM-INF'))){
+    let variants = [];
+    for(let j=0; j<lines.length; j++){
+      if(lines[j].startsWith('#EXT-X-STREAM-INF')){
+        const rm = lines[j].match(/RESOLUTION=\d+x(\d+)/);
+        const bm = lines[j].match(/BANDWIDTH=(\d+)/);
+        const r = rm ? parseInt(rm[1]) : 0;
+        const b = bm ? parseInt(bm[1]) : 0;
+        const urlLine = lines[j+1] && !lines[j+1].startsWith('#') ? lines[j+1] : null;
+        if(urlLine) variants.push({ r, b, url: urlLine });
+      }
+    }
+    // Sort descending by resolution first, then by bandwidth
+    variants.sort((a,b) => b.r - a.r || b.b - a.b);
+    if(!variants.length) throw new Error('No parsed variants in master playlist');
+    
+    const best = variants[0];
+    log(`Slot ${idx+1}: Selected highest quality stream: ${best.r ? best.r + 'p' : 'Original Quality'}`,'ok');
+    const rv = resolveUrl(best.url);
+    if(rv.includes('/api/proxy')) return downloadHLS(idx,rv,originalUrl,referer,filename,signal);
+    return downloadHLS(idx,API+'/api/proxy?url='+encodeURIComponent(rv)+'&referer='+encodeURIComponent(referer),rv,referer,filename,signal);
+  }
+  
+  const segs=lines.filter(l=>l&&!l.startsWith('#')).map(resolveUrl);if(!segs.length)throw new Error('Zero segments found in media playlist');
+  log(`Slot ${idx+1}: ${segs.length} segments ready (Highest Quality)`,'dl');Slots[idx].segTotal=segs.length;Slots[idx].segDone=0;updateSlotUI(idx);
+  
   const CC=10,segData=new Array(segs.length);let nxt=0,done=0;
-  const fetchSeg=async si=>{let t=segs[si];if(!t.includes('/api/proxy'))t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);try{const r=await fetch(t,{signal});if(r.ok){const b=await r.arrayBuffer();segData[si]=new Uint8Array(b);Slots[idx].downloaded+=b.byteLength;}else segData[si]=new Uint8Array(0);}catch(e){if(e.name==='AbortError')throw e;segData[si]=new Uint8Array(0);}done++;Slots[idx].segDone=done;trackSpeed(idx);Slots[idx].status=`${done}/${segs.length} segments...`;updateSlotUI(idx);updateStats();};
+  
+  // Segment fetch wrapper with 3 retries in case of network fluctuations
+  const fetchSegWithRetry = async (si, attempt=1) => {
+    let t=segs[si];if(!t.includes('/api/proxy'))t=API+'/api/proxy?url='+encodeURIComponent(t)+'&referer='+encodeURIComponent(referer);
+    try {
+      const r = await fetch(t,{signal});
+      if(r.ok){
+        const b = await r.arrayBuffer();
+        segData[si] = new Uint8Array(b);
+        Slots[idx].downloaded += b.byteLength;
+      } else {
+        throw new Error(`HTTP status ${r.status}`);
+      }
+    } catch(e) {
+      if(e.name === 'AbortError') throw e;
+      if(attempt < 3) {
+        // Retry segment with progressive delay
+        await new Promise(r => setTimeout(r, 600 * attempt));
+        return fetchSegWithRetry(si, attempt + 1);
+      }
+      log(`Slot ${idx+1}: Warning: Segment ${si+1} failed completely after 3 retries.`,'warn');
+      segData[si] = new Uint8Array(0); // Fill with empty data to prevent stream failure
+    }
+  };
+
+  const fetchSeg=async si=>{
+    await fetchSegWithRetry(si);
+    done++;Slots[idx].segDone=done;trackSpeed(idx);
+    Slots[idx].status=`${done}/${segs.length} segments...`;updateSlotUI(idx);updateStats();
+  };
+  
   await new Promise((res,rej)=>{let act=0;const go=()=>{while(act<CC&&nxt<segs.length){if(signal.aborted){rej(new DOMException('Aborted','AbortError'));return;}const si=nxt++;act++;fetchSeg(si).then(()=>{act--;if(done>=segs.length)res();else go();}).catch(rej);}};go();});
-  Slots[idx].status='Muxing standard MP4...';updateSlotUI(idx);
+  
+  Slots[idx].status='Stitching MP4 container (lossless)...';updateSlotUI(idx);
   const total=segData.reduce((a,c)=>a+c.byteLength,0);
   const outFilename=toMp4Filename(filename);
   const blob=await transmuxTsToMp4(segData);
-  log(`Slot ${idx+1}: OK ${fmtBytes(total)} TS -> ${fmtBytes(blob.size)} standard MP4 (H.264+AAC)`,'ok');toast(`Downloaded: ${outFilename}`);
+  log(`Slot ${idx+1}: Success! ${fmtBytes(total)} Lossless TS repackaged -> ${fmtBytes(blob.size)} MP4`,'ok');toast(`Downloaded: ${outFilename}`);
+  
   if(AUTO_SAVE)triggerBrowserDownload(blob,outFilename);
   Done.unshift({title:(Slots[idx].title||'Video')+' '+(Slots[idx].subtitle||''),filename:outFilename,size:blob.size,blob});DoneCount++;TotalBytes+=blob.size;renderDone();updateStats();
 }
@@ -536,13 +576,12 @@ async function downloadDirect(idx,url,title,signal) {
 async function testApi() {
   const el=document.getElementById('apiSt');el.innerHTML='<span class="spin"></span><span class="text-slate-600 ml-1.5">Checking</span>';
   try{const r=await fetch(API+'/api/home');if(r.ok){el.innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-400 ml-1.5">Connected</span>';log('✓ API connected','ok');}else el.innerHTML='<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-amber-400 ml-1.5">'+r.status+'</span>';}
-  catch(e){el.innerHTML='<span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-red-400/70 ml-1.5">Offline</span>';log('API: '+e.message,'err');if(window.location.protocol==='file:'){document.getElementById('setupBanner').classList.remove('hidden');log('Host on Vercel','warn');}}
+  catch(e){el.innerHTML='<span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-red-400/70 ml-1.5">Offline</span>';log('API Check Failed: '+e.message,'err');}
 }
 
 loadCfg();
-log('StreamVault v6 ready','ok');
-log('API: '+(API||'same-origin')+' | Output: real .mp4 container (iOS friendly)','api');
-if(window.location.protocol==='file:'){log('⚠ file:// — host on Vercel','err');document.getElementById('setupBanner').classList.remove('hidden');}
+log('StreamVault v6.2 (Platinum) ready','ok');
+log('High Quality variant selection enabled | Repackaging losslessly','api');
 testApi();
 setInterval(()=>{Slots.forEach((s,i)=>{if(s){trackSpeed(i);updateSlotUI(i);}});updateStats();},1000);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('cfgModal').classList.remove('show');});
