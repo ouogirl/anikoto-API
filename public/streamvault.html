@@ -4,420 +4,744 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>↓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>↓</text></svg>">
 <style>
+  /* Professional utility UI — pink/purple accents on neutral base, 0 radius */
   :root {
-    --bg: #f4f1ea;
-    --bg2: #ebe6dc;
-    --panel: #fffdf8;
-    --ink: #1c1917;
-    --muted: #6b6560;
-    --line: #d9d2c5;
-    --accent: #1f4e79;
-    --accent2: #163a5c;
-    --ok: #2f6b3a;
-    --warn: #9a6b12;
-    --bad: #a33b2b;
-    --chip: #eef3f8;
-    --shadow: 0 1px 2px rgba(28,25,23,.06), 0 8px 24px rgba(28,25,23,.06);
-    --radius: 10px;
-    --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-    --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", "SF Mono", Consolas, monospace;
+    --bg: #f6f3f8;
+    --surface: #ffffff;
+    --surface-2: #faf7fc;
+    --ink: #1f1528;
+    --ink-2: #3d2f4a;
+    --muted: #6f5d7c;
+    --faint: #9a89a8;
+    --line: #e6dceb;
+    --line-2: #d4c6dd;
+    --purple: #6d3fa8;
+    --purple-2: #5a2f8f;
+    --purple-soft: #efe6f7;
+    --pink: #c43d8a;
+    --pink-2: #a83074;
+    --pink-soft: #f8e8f1;
+    --ok: #1b7a45;
+    --ok-bg: #e9f6ee;
+    --warn: #8a6700;
+    --warn-bg: #fff8e8;
+    --bad: #b42318;
+    --bad-bg: #fdeceb;
+    --focus: rgba(109, 63, 168, 0.2);
+    --shadow: 0 1px 2px rgba(31, 21, 40, 0.04);
+    --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", "SF Mono", ui-monospace, Consolas, monospace;
+    --space: 12px;
+    --w: 960px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #161513;
-      --bg2: #1e1c19;
-      --panel: #221f1b;
-      --ink: #f3eee6;
-      --muted: #a39b90;
-      --line: #3a352e;
-      --accent: #7eb0e0;
-      --accent2: #5f93c4;
-      --ok: #7dca8c;
-      --warn: #e0b35a;
-      --bad: #e07a6c;
-      --chip: #2a333c;
-      --shadow: 0 1px 2px rgba(0,0,0,.25), 0 10px 28px rgba(0,0,0,.28);
+      --bg: #140f18;
+      --surface: #1c1622;
+      --surface-2: #231c2b;
+      --ink: #f4eef8;
+      --ink-2: #d9cee3;
+      --muted: #a794b6;
+      --faint: #7d6d8c;
+      --line: #32283d;
+      --line-2: #463753;
+      --purple: #b894e6;
+      --purple-2: #c9adef;
+      --purple-soft: #2a2036;
+      --pink: #e48bbc;
+      --pink-2: #f0a8d0;
+      --pink-soft: #2f1d2a;
+      --ok: #6dca95;
+      --ok-bg: #173226;
+      --warn: #e0bf5a;
+      --warn-bg: #322a14;
+      --bad: #f0a090;
+      --bad-bg: #3a221f;
+      --focus: rgba(184, 148, 230, 0.25);
+      --shadow: none;
     }
   }
-  * { box-sizing: border-box; }
+
+  *, *::before, *::after { box-sizing: border-box; border-radius: 0 !important; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: var(--font);
-    background:
-      radial-gradient(1200px 500px at 10% -10%, rgba(31,78,121,.08), transparent 60%),
-      linear-gradient(180deg, var(--bg), var(--bg2));
-    color: var(--ink);
-    min-height: 100vh;
+    font-size: 14px;
     line-height: 1.45;
+    color: var(--ink);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
-  a { color: var(--accent); }
-  .wrap { width: min(980px, calc(100% - 28px)); margin: 0 auto; padding: 22px 0 48px; }
-  header {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-    margin-bottom: 18px;
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--purple); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  ::selection { background: var(--purple-soft); color: var(--ink); }
+
+  /* App shell */
+  .app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .top {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .top-inner {
+    width: min(var(--w), calc(100% - 32px));
+    margin: 0 auto;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .mark {
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
   }
   .brand h1 {
     margin: 0;
-    font-size: 1.55rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--ink);
   }
-  .brand p {
-    margin: 4px 0 0;
-    color: var(--muted);
-    font-size: 0.92rem;
+  .brand .ver {
+    color: var(--faint);
+    font-size: 12px;
+    font-weight: 500;
+    padding-left: 8px;
+    border-left: 1px solid var(--line);
+    margin-left: 2px;
   }
-  .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .status {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 0.85rem; color: var(--muted);
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: 999px; padding: 6px 11px;
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #b0a89c; }
-  .dot.ok { background: var(--ok); }
-  .dot.bad { background: var(--bad); }
-  .dot.warn { background: var(--warn); }
-  .panel {
-    background: var(--panel);
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 10px;
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--ink-2);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    background: var(--faint);
+    flex: 0 0 auto;
+  }
+  .dot.ok { background: var(--ok); }
+  .dot.warn { background: var(--warn); }
+  .dot.bad { background: var(--bad); }
+
+  .main {
+    width: min(var(--w), calc(100% - 32px));
+    margin: 0 auto;
+    padding: 20px 0 48px;
+    flex: 1;
+  }
+
+  .notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    border: 1px solid #e2c96a;
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: 13px;
+  }
+  @media (prefers-color-scheme: dark) {
+    .notice { border-color: #6a5a2a; }
+  }
+
+  /* Cards / panels */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
     box-shadow: var(--shadow);
-    padding: 14px;
     margin-bottom: 12px;
   }
+  .card-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 40px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
+  }
+  .card-h h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card-b { padding: 14px 12px; }
+
+  /* Stats */
   .stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    margin-bottom: 12px;
   }
   .stat {
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 12px 10px;
-    text-align: center;
+    padding: 12px;
+    border-right: 1px solid var(--line);
   }
-  .stat b {
+  .stat:last-child { border-right: 0; }
+  .stat .k {
     display: block;
-    font-size: 1.25rem;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .stat .v {
+    font-size: 18px;
+    font-weight: 650;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
-  }
-  .stat span { color: var(--muted); font-size: 0.78rem; }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .grow { flex: 1 1 220px; min-width: 0; }
-  input[type="url"], input[type="text"], input[type="number"], select {
-    width: 100%;
-    font: inherit;
     color: var(--ink);
+  }
+  .stat .v.accent { color: var(--purple); }
+
+  /* Form */
+  .lbl {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .form {
+    display: grid;
+    grid-template-columns: 1fr 92px auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+  @media (max-width: 720px) {
+    .form { grid-template-columns: 1fr 1fr; }
+    .form .full { grid-column: 1 / -1; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .stat:nth-child(2n) { border-right: 0; }
+  }
+  @media (max-width: 480px) {
+    .form { grid-template-columns: 1fr; }
+    .brand .ver { display: none; }
+  }
+
+  input[type="url"],
+  input[type="text"],
+  input[type="number"],
+  select {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
     background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 10px 12px;
+    border: 1px solid var(--line-2);
+    color: var(--ink);
     outline: none;
   }
-  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(31,78,121,.12); }
-  select { width: auto; min-width: 76px; }
-  button, .btn {
-    font: inherit;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-    color: var(--ink);
-    padding: 9px 13px;
+  input:hover, select:hover { border-color: var(--muted); }
+  input:focus, select:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 3px var(--focus);
+    background: var(--surface);
+  }
+  select { min-width: 92px; }
+
+  button {
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--line-2);
+    background: var(--surface);
+    color: var(--ink-2);
     cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
   }
-  button:hover { filter: brightness(0.98); }
+  button:hover { background: var(--purple-soft); border-color: var(--purple); color: var(--ink); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--purple);
+    border-color: var(--purple-2);
     color: #fff;
-    font-weight: 600;
   }
-  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); filter: none; }
-  .btn-good {
-    background: var(--ok);
-    border-color: var(--ok);
+  .btn-primary:hover {
+    background: var(--purple-2);
+    border-color: var(--purple-2);
     color: #fff;
-    font-weight: 600;
   }
-  .btn-ghost { background: transparent; }
-  .btn-tiny { padding: 4px 9px; font-size: 0.8rem; }
-  .hint { margin-top: 8px; color: var(--muted); font-size: 0.85rem; min-height: 1.2em; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 760px) {
-    .stats, .grid2 { grid-template-columns: 1fr 1fr; }
+  .btn-secondary {
+    background: var(--pink);
+    border-color: var(--pink-2);
+    color: #fff;
   }
-  @media (max-width: 520px) {
-    .stats { grid-template-columns: 1fr 1fr; }
-    .grid2 { grid-template-columns: 1fr; }
+  .btn-secondary:hover {
+    background: var(--pink-2);
+    border-color: var(--pink-2);
+    color: #fff;
   }
-  .slot h3 {
-    margin: 0 0 8px;
-    font-size: 0.95rem;
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  }
-  .slot .title { font-weight: 650; margin: 2px 0; }
-  .slot .sub { color: var(--muted); font-size: 0.85rem; }
-  .idle {
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--line);
     color: var(--muted);
-    text-align: center;
-    padding: 28px 8px;
-    border: 1px dashed var(--line);
-    border-radius: 8px;
-  }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-  .chip {
-    font-size: 0.72rem;
+    height: 30px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: .02em;
+  }
+  .btn-ghost:hover { color: var(--ink); border-color: var(--line-2); background: var(--surface-2); }
+  .btn-xs {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .hint {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  /* Grid areas */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 720px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .slot-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .slot-top h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 650;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+  }
+  .title {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--ink);
+    word-break: break-word;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  .empty {
+    border: 1px dashed var(--line-2);
+    background: var(--surface-2);
+    color: var(--faint);
+    text-align: center;
+    padding: 28px 12px;
+    font-size: 13px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 7px;
+    border: 1px solid var(--line-2);
+    background: var(--purple-soft);
+    color: var(--purple-2);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    background: var(--chip);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 3px 8px;
+  }
+  .chip.pink {
+    background: var(--pink-soft);
+    color: var(--pink-2);
   }
   .bar {
-    height: 8px;
-    background: var(--bg2);
+    height: 6px;
     border: 1px solid var(--line);
-    border-radius: 999px;
+    background: var(--bg);
     overflow: hidden;
   }
   .bar > i {
     display: block;
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--accent), #3f7cac);
-    transition: width .2s ease;
+    background: linear-gradient(90deg, var(--purple), var(--pink));
+    transition: width .15s linear;
   }
   .meta {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
     margin-top: 8px;
-    font-size: 0.8rem;
+    font-size: 12px;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
   .list {
-    max-height: 150px;
+    max-height: 168px;
     overflow: auto;
-    font-size: 0.88rem;
   }
   .list-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    padding: 7px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--line);
+    font-size: 13px;
   }
   .list-item:last-child { border-bottom: 0; }
+  .list-item span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .log {
     font-family: var(--mono);
-    font-size: 0.75rem;
+    font-size: 11.5px;
     line-height: 1.55;
     max-height: 220px;
     overflow: auto;
+    padding: 10px 12px;
     background: var(--bg);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 10px;
     color: var(--muted);
-    white-space: pre-wrap;
   }
   .log .ok { color: var(--ok); }
   .log .err { color: var(--bad); }
   .log .warn { color: var(--warn); }
-  .log .api { color: var(--accent); }
+  .log .api { color: var(--purple); }
+  .log .dl { color: var(--pink); }
+  .fine {
+    margin: 8px 0 0;
+    color: var(--faint);
+    font-size: 11.5px;
+  }
+
+  /* Modal */
   .modal {
-    position: fixed; inset: 0;
-    background: rgba(20,18,16,.45);
-    display: none; align-items: center; justify-content: center;
-    padding: 16px; z-index: 40;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 12, 28, 0.45);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 10vh 16px 16px;
+    z-index: 50;
   }
   .modal.open { display: flex; }
   .modal-card {
-    width: min(460px, 100%);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    width: min(440px, 100%);
+    background: var(--surface);
+    border: 1px solid var(--line-2);
     box-shadow: var(--shadow);
-    padding: 16px;
-    max-height: 90vh;
+    max-height: 80vh;
     overflow: auto;
   }
-  .modal-card h2 { margin: 0 0 12px; font-size: 1.1rem; }
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 5px; }
-  .field small { display: block; color: var(--muted); margin-top: 4px; font-size: 0.75rem; }
-  .switch-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .banner {
-    background: #fff7df;
-    border: 1px solid #e6d39a;
-    color: #6d5410;
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 12px;
-    font-size: 0.9rem;
+  .modal-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-2);
   }
-  @media (prefers-color-scheme: dark) {
-    .banner { background: #3a3118; border-color: #6b5a28; color: #e8d39a; }
+  .modal-h h2 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--ink);
+  }
+  .modal-b { padding: 14px 12px; }
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .field small {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+  .row-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
   }
   .toast {
-    position: fixed; right: 16px; bottom: 16px; z-index: 50;
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: 8px; box-shadow: var(--shadow);
-    padding: 10px 12px; font-size: 0.9rem;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 60;
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-left: 3px solid var(--purple);
+    box-shadow: 0 8px 24px rgba(31, 21, 40, 0.12);
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--ink);
+    max-width: min(360px, calc(100% - 32px));
   }
   .hidden { display: none !important; }
+
+  /* Scrollbars subtle */
+  .log::-webkit-scrollbar,
+  .list::-webkit-scrollbar { width: 8px; height: 8px; }
+  .log::-webkit-scrollbar-thumb,
+  .list::-webkit-scrollbar-thumb { background: var(--line-2); }
+  .log::-webkit-scrollbar-track,
+  .list::-webkit-scrollbar-track { background: transparent; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand">
-      <h1>StreamVault</h1>
-      <p>Anime episode downloader · highest quality · local MP4</p>
-    </div>
-    <div class="top-actions">
-      <div class="status" id="apiSt"><span class="dot" id="apiDot"></span><span id="apiTxt">Checking…</span></div>
-      <button class="btn-ghost" type="button" onclick="openSettings()">Settings</button>
+<div class="app">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">↓</div>
+        <h1>StreamVault</h1>
+        <span class="ver">v6.5</span>
+      </div>
+      <div class="top-actions">
+        <div class="pill" id="apiSt" title="API status">
+          <span class="dot" id="apiDot"></span>
+          <span id="apiTxt">Checking</span>
+        </div>
+        <button type="button" class="btn-ghost" onclick="openSettings()">Settings</button>
+      </div>
     </div>
   </header>
 
-  <div id="setupBanner" class="banner hidden">
-    Open this from your Render/Vercel site, or set the API URL in Settings.
-    <button class="btn-tiny" style="margin-left:8px" onclick="this.parentElement.classList.add('hidden')">Dismiss</button>
-  </div>
-
-  <div class="panel stats">
-    <div class="stat"><b id="sA">0/2</b><span>Active slots</span></div>
-    <div class="stat"><b id="sS">—</b><span>Speed</span></div>
-    <div class="stat"><b id="sD">0</b><span>Done</span></div>
-    <div class="stat"><b id="sB">0 B</b><span>Downloaded</span></div>
-  </div>
-
-  <div class="panel">
-    <div class="row">
-      <div class="grow">
-        <input id="urlIn" type="url" placeholder="Paste Anikoto / HiAnime URL" oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()">
-      </div>
-      <select id="audSel"><option value="sub">SUB</option><option value="dub">DUB</option></select>
-      <button class="btn-primary" type="button" onclick="go()">Download ep</button>
-      <button class="btn-good" type="button" onclick="goAll()">All eps</button>
+  <main class="main">
+    <div id="setupBanner" class="notice hidden">
+      <span>This page needs your API URL. Open Settings and paste it, or host the file on the API origin.</span>
+      <button type="button" class="btn-xs" onclick="this.parentElement.classList.add('hidden')">Dismiss</button>
     </div>
-    <div class="hint" id="urlHint">Tip: pick DUB/SUB first. Downloads stay 1080p when available.</div>
-  </div>
 
-  <div class="grid2">
-    <div class="panel slot" id="sl0">
-      <h3>
-        <span>Slot 1 <span class="dot" id="d0" style="display:inline-block;margin-left:6px"></span></span>
-        <button class="btn-tiny hidden" id="x0" type="button" onclick="cancel(0)">Cancel</button>
-      </h3>
-      <div id="e0" class="idle">Waiting</div>
-      <div id="a0" class="hidden">
-        <div class="title" id="t0">—</div>
-        <div class="sub" id="u0">—</div>
-        <div class="chips" id="bg0"></div>
-        <div class="bar"><i id="p0"></i></div>
-        <div class="meta">
-          <span id="pc0">0%</span>
-          <span id="sz0">—</span>
-          <span id="sp0">—</span>
-          <span id="et0">—</span>
+    <section class="card">
+      <div class="card-h"><h2>Source</h2></div>
+      <div class="card-b">
+        <div class="form">
+          <div class="full">
+            <label class="lbl" for="urlIn">Episode or series URL</label>
+            <input id="urlIn" type="url" placeholder="https://anikoto.cz/watch/title-slug/ep-1" autocomplete="off" oninput="detectUrl()" onkeydown="if(event.key==='Enter')go()">
+          </div>
+          <div>
+            <label class="lbl" for="audSel">Track</label>
+            <select id="audSel">
+              <option value="sub">SUB</option>
+              <option value="dub">DUB</option>
+            </select>
+          </div>
+          <div>
+            <label class="lbl">&nbsp;</label>
+            <button type="button" class="btn-primary" onclick="go()">Download</button>
+          </div>
+          <div>
+            <label class="lbl">&nbsp;</label>
+            <button type="button" class="btn-secondary" onclick="goAll()">All episodes</button>
+          </div>
         </div>
-        <div class="sub" id="st0" style="margin-top:6px">…</div>
+        <p class="hint" id="urlHint">Highest listed quality is selected automatically (usually 1080p).</p>
       </div>
+    </section>
+
+    <div class="stats" aria-label="Session stats">
+      <div class="stat"><span class="k">Slots</span><span class="v" id="sA">0/2</span></div>
+      <div class="stat"><span class="k">Speed</span><span class="v accent" id="sS">—</span></div>
+      <div class="stat"><span class="k">Done</span><span class="v" id="sD">0</span></div>
+      <div class="stat"><span class="k">Data</span><span class="v" id="sB">0 B</span></div>
     </div>
-    <div class="panel slot" id="sl1">
-      <h3>
-        <span>Slot 2 <span class="dot" id="d1" style="display:inline-block;margin-left:6px"></span></span>
-        <button class="btn-tiny hidden" id="x1" type="button" onclick="cancel(1)">Cancel</button>
-      </h3>
-      <div id="e1" class="idle">Waiting</div>
-      <div id="a1" class="hidden">
-        <div class="title" id="t1">—</div>
-        <div class="sub" id="u1">—</div>
-        <div class="chips" id="bg1"></div>
-        <div class="bar"><i id="p1"></i></div>
-        <div class="meta">
-          <span id="pc1">0%</span>
-          <span id="sz1">—</span>
-          <span id="sp1">—</span>
-          <span id="et1">—</span>
+
+    <div class="grid-2">
+      <section class="card" id="sl0">
+        <div class="card-b">
+          <div class="slot-top">
+            <h3><span class="dot" id="d0"></span> Slot 1</h3>
+            <button type="button" class="btn-xs hidden" id="x0" onclick="cancel(0)">Cancel</button>
+          </div>
+          <div id="e0" class="empty">Idle</div>
+          <div id="a0" class="hidden">
+            <div class="title" id="t0">—</div>
+            <div class="sub" id="u0">—</div>
+            <div class="chips" id="bg0"></div>
+            <div class="bar"><i id="p0"></i></div>
+            <div class="meta">
+              <span id="pc0">0%</span>
+              <span id="sz0">—</span>
+              <span id="sp0">—</span>
+              <span id="et0">—</span>
+            </div>
+            <div class="sub" id="st0" style="margin-top:8px">…</div>
+          </div>
         </div>
-        <div class="sub" id="st1" style="margin-top:6px">…</div>
-      </div>
+      </section>
+      <section class="card" id="sl1">
+        <div class="card-b">
+          <div class="slot-top">
+            <h3><span class="dot" id="d1"></span> Slot 2</h3>
+            <button type="button" class="btn-xs hidden" id="x1" onclick="cancel(1)">Cancel</button>
+          </div>
+          <div id="e1" class="empty">Idle</div>
+          <div id="a1" class="hidden">
+            <div class="title" id="t1">—</div>
+            <div class="sub" id="u1">—</div>
+            <div class="chips" id="bg1"></div>
+            <div class="bar"><i id="p1"></i></div>
+            <div class="meta">
+              <span id="pc1">0%</span>
+              <span id="sz1">—</span>
+              <span id="sp1">—</span>
+              <span id="et1">—</span>
+            </div>
+            <div class="sub" id="st1" style="margin-top:8px">…</div>
+          </div>
+        </div>
+      </section>
     </div>
-  </div>
 
-  <div class="grid2" style="margin-top:12px">
-    <div class="panel">
-      <div class="row" style="justify-content:space-between;margin-bottom:6px">
-        <strong>Queue <span id="qCount" style="color:var(--muted);font-weight:500">0</span></strong>
-        <button class="btn-tiny" type="button" onclick="Q=[];renderQ()">Clear</button>
-      </div>
-      <div class="list" id="qEl"><div class="idle" style="padding:14px">Empty</div></div>
+    <div class="grid-2">
+      <section class="card">
+        <div class="card-h">
+          <h2>Queue <span id="qCount" style="color:var(--faint);font-weight:600;letter-spacing:0">0</span></h2>
+          <button type="button" class="btn-xs" onclick="Q=[];renderQ()">Clear</button>
+        </div>
+        <div class="card-b">
+          <div class="list" id="qEl"><div class="empty" style="padding:18px">No queued items</div></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-h">
+          <h2>Completed</h2>
+          <button type="button" class="btn-xs" onclick="Done=[];renderDone()">Clear</button>
+        </div>
+        <div class="card-b">
+          <div class="list" id="dEl"><div class="empty" style="padding:18px">No completed files</div></div>
+        </div>
+      </section>
     </div>
-    <div class="panel">
-      <div class="row" style="justify-content:space-between;margin-bottom:6px">
-        <strong>Completed</strong>
-        <button class="btn-tiny" type="button" onclick="Done=[];renderDone()">Clear</button>
-      </div>
-      <div class="list" id="dEl"><div class="idle" style="padding:14px">Empty</div></div>
-    </div>
-  </div>
 
-  <div class="panel" style="margin-top:12px">
-    <div class="row" style="justify-content:space-between;margin-bottom:6px">
-      <strong>Log</strong>
-      <button class="btn-tiny" type="button" onclick="document.getElementById('logBox').innerHTML=''">Clear</button>
-    </div>
-    <div class="log" id="logBox"></div>
-  </div>
+    <section class="card">
+      <div class="card-h">
+        <h2>Log</h2>
+        <button type="button" class="btn-xs" onclick="document.getElementById('logBox').innerHTML=''">Clear</button>
+      </div>
+      <div class="card-b">
+        <div class="log" id="logBox"></div>
+        <p class="fine">Output is standard MP4 (H.264 + AAC). Source quality is not re-encoded down.</p>
+      </div>
+    </section>
+  </main>
 </div>
 
 <div class="modal" id="cfgModal" onclick="if(event.target===this)closeSettings()">
-  <div class="modal-card">
-    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+  <div class="modal-card" role="dialog" aria-label="Settings">
+    <div class="modal-h">
       <h2>Settings</h2>
-      <button class="btn-tiny" type="button" onclick="closeSettings()">Close</button>
+      <button type="button" class="btn-xs" onclick="closeSettings()">Close</button>
     </div>
-    <div class="field">
-      <label>API base URL</label>
-      <input id="cfgApi" type="text" placeholder="https://your-api.onrender.com">
-      <small>Leave blank for same-origin.</small>
+    <div class="modal-b">
+      <div class="field">
+        <label for="cfgApi">API base URL</label>
+        <input id="cfgApi" type="text" placeholder="https://your-api.onrender.com">
+        <small>Leave empty when this page is served from the API host.</small>
+      </div>
+      <div class="field">
+        <label for="cfgCf">Cloudflare Worker (optional)</label>
+        <input id="cfgCf" type="text" placeholder="https://your-worker.workers.dev">
+        <small>Fallback if upstream CDNs block your server IP.</small>
+      </div>
+      <div class="field">
+        <label for="cfgConc">Segment concurrency</label>
+        <input id="cfgConc" type="number" min="2" max="16" value="10">
+        <small>2–16. Higher is faster; lower if you hit rate limits.</small>
+      </div>
+      <div class="field">
+        <label for="cfgRetries">Retries</label>
+        <input id="cfgRetries" type="number" min="0" max="8" value="3">
+      </div>
+      <div class="field">
+        <label for="cfgStagger">Slot stagger (ms)</label>
+        <input id="cfgStagger" type="number" min="0" max="15000" value="800">
+      </div>
+      <div class="field">
+        <label for="cfgRequeue">Failed episode requeues</label>
+        <input id="cfgRequeue" type="number" min="0" max="5" value="2">
+      </div>
+      <div class="field row-between">
+        <label for="cfgAuto" style="margin:0">Auto-save when finished</label>
+        <input id="cfgAuto" type="checkbox" checked>
+      </div>
+      <button type="button" class="btn-primary" style="width:100%" onclick="saveCfg()">Save</button>
     </div>
-    <div class="field">
-      <label>Cloudflare Worker proxy (optional)</label>
-      <input id="cfgCf" type="text" placeholder="https://your-worker.workers.dev">
-      <small>Only needed if more CDNs start blocking Render.</small>
-    </div>
-    <div class="field">
-      <label>Segment concurrency (2–16)</label>
-      <input id="cfgConc" type="number" min="2" max="16" value="10">
-      <small>Higher = faster. If you see many failures, drop to 6–8.</small>
-    </div>
-    <div class="field">
-      <label>Retries per request</label>
-      <input id="cfgRetries" type="number" min="0" max="8" value="3">
-    </div>
-    <div class="field">
-      <label>Slot stagger (ms)</label>
-      <input id="cfgStagger" type="number" min="0" max="15000" value="800">
-    </div>
-    <div class="field">
-      <label>Failed episode requeues</label>
-      <input id="cfgRequeue" type="number" min="0" max="5" value="2">
-    </div>
-    <div class="field switch-row">
-      <label style="margin:0">Auto-save when finished</label>
-      <input id="cfgAuto" type="checkbox" checked>
-    </div>
-    <button class="btn-primary" style="width:100%" type="button" onclick="saveCfg()">Save</button>
   </div>
 </div>
 
@@ -775,10 +1099,10 @@ function updateSlotUI(idx) {
   $('t' + idx).textContent = s.title || '—';
   $('u' + idx).textContent = s.subtitle || '';
   let chips = '';
-  if (s.audioType) chips += `<span class="chip">${s.audioType}</span>`;
+  if (s.audioType) chips += `<span class="chip pink">${s.audioType}</span>`;
   if (s.serverName) chips += `<span class="chip">${s.serverName}</span>`;
   if (s.via) chips += `<span class="chip">${s.via}</span>`;
-  if (s.quality) chips += `<span class="chip">${s.quality}</span>`;
+  if (s.quality) chips += `<span class="chip pink">${s.quality}</span>`;
   $('bg' + idx).innerHTML = chips;
   const pct = s.segTotal ? (s.segDone / s.segTotal * 100) : (s.totalSize ? s.downloaded / s.totalSize * 100 : 0);
   $('p' + idx).style.width = Math.min(pct, 100) + '%';
@@ -794,7 +1118,7 @@ function updateSlotUI(idx) {
 function renderQ() {
   $('qCount').textContent = Q.length;
   const el = $('qEl');
-  if (!Q.length) { el.innerHTML = '<div class="idle" style="padding:14px">Empty</div>'; return; }
+  if (!Q.length) { el.innerHTML = '<div class="empty" style="padding:18px">No queued items</div>'; return; }
   el.innerHTML = Q.map((q, i) => {
     const retry = q._requeues ? ` · retry ${q._requeues}` : '';
     return `<div class="list-item"><span>${q.title}${retry}</span><button class="btn-tiny" type="button" onclick="Q.splice(${i},1);renderQ()">✕</button></div>`;
@@ -803,7 +1127,7 @@ function renderQ() {
 
 function renderDone() {
   const el = $('dEl');
-  if (!Done.length) { el.innerHTML = '<div class="idle" style="padding:14px">Empty</div>'; return; }
+  if (!Done.length) { el.innerHTML = '<div class="empty" style="padding:18px">No completed files</div>'; return; }
   el.innerHTML = Done.map((d, i) =>
     `<div class="list-item"><span>✓ ${d.title} <span style="color:var(--muted)">${fmtBytes(d.size)}</span></span>${d.blob ? `<button class="btn-tiny" type="button" onclick="redownload(${i})">Save</button>` : ''}</div>`
   ).join('');
@@ -952,7 +1276,9 @@ async function startSlot(idx, item) {
   updateSlotUI(idx); updateStats();
   if (Q.length) {
     const next = Q.shift(); renderQ();
-    await sleep(failed ? SLOT_STAGGER_MS + 600 : SLOT_STAGGER_MS);
+    // Give the watch API a breath after hard failures (empty sources / 403 storms)
+    const pause = failed ? SLOT_STAGGER_MS + 1800 : SLOT_STAGGER_MS;
+    await sleep(pause);
     startSlot(idx, next);
   }
 }
@@ -978,10 +1304,24 @@ async function resolveHiAnimeSlug(hiSlug) {
   return d.data.results[0].slug;
 }
 
-function rankSources(sources, wantAudio) {
+/** Normalize API audio labels: softsub/hsub → sub */
+function normAudio(t) {
+  const x = String(t || '').toLowerCase();
+  if (x === 'dub' || x === 'sub') return x;
+  if (x === 'softsub' || x === 'hsub' || x === 'soft-sub') return 'sub';
+  return x;
+}
+
+function audioMatches(sourceType, wantAudio) {
+  return normAudio(sourceType) === normAudio(wantAudio);
+}
+
+function rankSources(sources, wantAudio, { strict = true } = {}) {
   const withM3u8 = sources.filter(s => s.m3u8);
-  const audioMatch = withM3u8.filter(s => s.type === wantAudio);
-  const pool = audioMatch.length ? audioMatch.concat(withM3u8.filter(s => s.type !== wantAudio)) : withM3u8;
+  const want = withM3u8.filter(s => audioMatches(s.type, wantAudio));
+  const other = withM3u8.filter(s => !audioMatches(s.type, wantAudio));
+  // Strict: only requested track. Non-strict: requested first, then others.
+  const pool = strict ? want : (want.length ? want.concat(other) : other);
   const score = s => {
     let n = 0;
     const name = s.server || '';
@@ -989,15 +1329,61 @@ function rankSources(sources, wantAudio) {
     if (/Kiwi/i.test(name)) n += 80;
     if (/Vidstream/i.test(name)) n += 40;
     if (/^HD-?1/i.test(name)) n -= 30;
-    if (s.type === wantAudio) n += 15;
+    if (audioMatches(s.type, wantAudio)) n += 50;
+    else n -= 100; // never prefer wrong track when mixed
     return n;
   };
   return pool.slice().sort((a, b) => score(b) - score(a));
 }
 
+function expandSourcePaths(ordered) {
+  const expanded = [];
+  const seen = new Set();
+  for (const src of ordered) {
+    for (const [i, m] of buildUrlCandidates(src.m3u8).entries()) {
+      const key = normAudio(src.type) + '|' + m;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      let tag = '';
+      try { tag = new URL(m).hostname.replace(/^cdn\./, ''); } catch (_) {}
+      expanded.push({
+        ...src,
+        m3u8: m,
+        server: i ? `${src.server}@${tag}` : src.server,
+        _mirrored: i > 0
+      });
+    }
+  }
+  return expanded;
+}
+
+async function trySourceList(idx, expanded, slug, ep, signal) {
+  let lastErr = null;
+  for (const src of expanded) {
+    const track = normAudio(src.type) || 'unk';
+    const fn = sanitizeFilename(`${Slots[idx].title || slug}_Ep${ep}_${track}`) + '.ts';
+    Slots[idx].serverName = src.server;
+    Slots[idx].audioType = track;
+    Slots[idx].via = src._mirrored ? 'mirror' : '';
+    updateSlotUI(idx);
+    log(`Slot ${idx + 1}: ${src.server} (${track})${src._mirrored ? ' mirror' : ''}`, 'dl');
+    try {
+      await downloadHLS(idx, unwrapProxyUrl(src.m3u8), src.referer || 'https://megaplay.buzz/', fn, signal);
+      return track; // actual audio saved
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      lastErr = e;
+      log(`Slot ${idx + 1}: ${src.server} (${track}) failed · ${e.message}`, 'warn');
+      await sleep(150);
+    }
+  }
+  throw lastErr || new Error('All sources failed');
+}
+
 async function downloadAnime(idx, item, signal) {
   let slug = item.slug;
-  const ep = item.ep || 1, audio = item.audio || 'sub';
+  const ep = item.ep || 1, audio = normAudio(item.audio || 'sub');
+  const refresh = (item._requeues || 0) > 0 ? '?refresh=1&' : '?';
 
   if (item.platform === 'hianime') {
     Slots[idx].status = 'Searching…'; updateSlotUI(idx);
@@ -1005,8 +1391,9 @@ async function downloadAnime(idx, item, signal) {
   }
 
   Slots[idx].status = 'Getting sources…'; updateSlotUI(idx);
-  log(`Slot ${idx + 1}: /api/watch/${slug}?ep=${ep}`, 'api');
-  const resp = await fetchWithRetry(`${API}/api/watch/${slug}?ep=${ep}`, { signal }, MAX_RETRIES, `Slot ${idx + 1}`);
+  log(`Slot ${idx + 1}: /api/watch/${slug}?ep=${ep} · want ${audio.toUpperCase()}`, 'api');
+  const watchUrl = `${API}/api/watch/${slug}${refresh}ep=${ep}`.replace('?&', '?');
+  const resp = await fetchWithRetry(watchUrl, { signal }, MAX_RETRIES, `Slot ${idx + 1}`);
   const text = await resp.text();
   const sources = [];
   let epInfo = null;
@@ -1026,7 +1413,7 @@ async function downloadAnime(idx, item, signal) {
       } catch (_) {}
     }
   }
-  if (!sources.length) throw new Error('No sources');
+  if (!sources.length) throw new Error('No sources from API');
   if (epInfo) Slots[idx].subtitle = 'Episode ' + epInfo.number;
 
   for (const s of sources) {
@@ -1035,45 +1422,44 @@ async function downloadAnime(idx, item, signal) {
       const u = unwrapProxyUrl(s.proxyUrl);
       if (!s.m3u8 && /^https?:\/\//i.test(u)) s.m3u8 = u;
     }
+    s.type = normAudio(s.type) || s.type;
   }
 
-  const ordered = rankSources(sources, audio);
-  if (!ordered.length) throw new Error('No m3u8 sources');
+  const allTypes = [...new Set(sources.filter(s => s.m3u8).map(s => s.type || '?'))];
+  const summary = sources.filter(s => s.m3u8).map(s => `${s.server}(${s.type})`).join(', ')
+    || sources.map(s => `${s.server}(${s.type||'?'}·no-m3u8)`).join(', ');
+  log(`Slot ${idx + 1}: sources ${summary || '(none)'}`, 'api');
 
-  // Expand with CDN mirrors, de-dupe by final URL
-  const expanded = [];
-  const seen = new Set();
-  for (const src of ordered) {
-    for (const [i, m] of buildUrlCandidates(src.m3u8).entries()) {
-      if (seen.has(m)) continue;
-      seen.add(m);
-      let tag = '';
-      try { tag = new URL(m).hostname.replace(/^cdn\./, ''); } catch (_) {}
-      expanded.push({ ...src, m3u8: m, server: i ? `${src.server}@${tag}` : src.server, _mirrored: i > 0 });
-    }
-  }
-
-  log(`Slot ${idx + 1}: ${expanded.length} paths · prefer 1080p`, 'dl');
-  const fn = sanitizeFilename(`${Slots[idx].title || slug}_Ep${ep}_${ordered[0].type || audio}`) + '.ts';
-  let lastErr = null;
-  for (const src of expanded) {
-    Slots[idx].serverName = src.server;
-    Slots[idx].audioType = src.type;
-    if (src._mirrored) Slots[idx].via = 'mirror';
-    updateSlotUI(idx);
-    log(`Slot ${idx + 1}: ${src.server} (${src.type})${src._mirrored ? ' mirror' : ''}`, 'dl');
+  // 1) Strict: only requested audio track
+  let ordered = rankSources(sources, audio, { strict: true });
+  if (ordered.length) {
+    const expanded = expandSourcePaths(ordered);
+    log(`Slot ${idx + 1}: ${expanded.length} ${audio.toUpperCase()} paths · 1080p preferred`, 'dl');
     try {
-      await downloadHLS(idx, unwrapProxyUrl(src.m3u8), src.referer || 'https://megaplay.buzz/', fn, signal);
+      const got = await trySourceList(idx, expanded, slug, ep, signal);
+      if (got !== audio) log(`Slot ${idx + 1}: note — file tagged ${got.toUpperCase()}`, 'warn');
       return;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
-      lastErr = e;
-      log(`Slot ${idx + 1}: ${src.server} failed · ${e.message}`, 'warn');
-      // Don't wait long — try next path quickly
-      await sleep(120);
+      log(`Slot ${idx + 1}: all ${audio.toUpperCase()} paths failed · ${e.message}`, 'warn');
     }
+  } else {
+    log(`Slot ${idx + 1}: no ${audio.toUpperCase()} m3u8 (have: ${allTypes.join(', ') || 'none'})`, 'warn');
   }
-  throw lastErr || new Error('All sources failed');
+
+  // 2) Optional fallback to other track — only if user didn't forbid it, and only after strict fail
+  // Default: allow fallback but make it very obvious in UI + filename
+  const fallback = rankSources(sources, audio, { strict: false }).filter(s => !audioMatches(s.type, audio));
+  if (!fallback.length) {
+    throw new Error(`No playable ${audio.toUpperCase()} sources` + (allTypes.length ? ` (API had: ${allTypes.join(', ')})` : ' (API returned no m3u8)'));
+  }
+
+  log(`Slot ${idx + 1}: falling back to other audio (${fallback.map(s => s.type).filter((v,i,a)=>a.indexOf(v)===i).join('/')}) — DUB was requested but unavailable/failed`, 'warn');
+  toast(`${audio.toUpperCase()} failed — trying other track`, false);
+  const expandedFb = expandSourcePaths(fallback);
+  const got = await trySourceList(idx, expandedFb, slug, ep, signal);
+  log(`Slot ${idx + 1}: saved as ${got.toUpperCase()} (fallback, not ${audio.toUpperCase()})`, 'warn');
+  toast(`Saved ${got.toUpperCase()} (wanted ${audio.toUpperCase()})`, false);
 }
 
 async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
@@ -1201,21 +1587,75 @@ async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
     pump();
   });
 
-  if (failedIdx.length / segs.length > 0.12) {
+  // Second pass: retry failed segments one-by-one at lower concurrency
+  if (failedIdx.length) {
+    log(`Slot ${idx + 1}: retrying ${failedIdx.length} missing segments…`, 'warn');
+    Slots[idx].status = `Retrying ${failedIdx.length} gaps…`;
+    updateSlotUI(idx);
+    const still = [];
+    // serial-ish small pool so we don't hammer a dying CDN
+    const retryConc = Math.min(4, SEG_CONCURRENCY);
+    let ri = 0;
+    await new Promise((res, rej) => {
+      let act = 0, finished = 0;
+      const pump = () => {
+        while (act < retryConc && ri < failedIdx.length) {
+          if (signal.aborted) { rej(new DOMException('Aborted', 'AbortError')); return; }
+          const si = failedIdx[ri++]; act++;
+          (async () => {
+            let ok = false;
+            for (let t = 0; t < 4 && !ok; t++) {
+              try {
+                const r = await smartFetch(idx, segs[si], referer, { isSegment: true, signal });
+                const b = await r.arrayBuffer();
+                if (b.byteLength && isValidMediaBytes(b)) {
+                  // undo previous 0-byte accounting if any
+                  segData[si] = new Uint8Array(b);
+                  Slots[idx].downloaded += b.byteLength;
+                  ok = true;
+                }
+              } catch (e) {
+                if (e.name === 'AbortError') throw e;
+                await sleep(120 * (t + 1));
+              }
+            }
+            if (!ok) still.push(si);
+          })().then(() => {
+            act--; finished++;
+            Slots[idx].status = `Gap retry ${finished}/${failedIdx.length}`;
+            updateSlotUI(idx);
+            if (finished >= failedIdx.length) res();
+            else pump();
+          }).catch(rej);
+        }
+      };
+      pump();
+      if (!failedIdx.length) res();
+    });
+    failedIdx.length = 0;
+    failedIdx.push(...still);
+  }
+
+  const failRatio = failedIdx.length / segs.length;
+  // Stricter: >5% gaps = fail this source and try next (was 12% and "mux anyway")
+  if (failRatio > 0.05) {
     throw new Error(`Too many segments failed (${failedIdx.length}/${segs.length})`);
   }
-  if (failedIdx.length) log(`Slot ${idx + 1}: ${failedIdx.length} gaps · muxing anyway`, 'warn');
+  if (failedIdx.length) {
+    log(`Slot ${idx + 1}: ${failedIdx.length} tiny gaps left · muxing`, 'warn');
+  }
 
   Slots[idx].status = 'Building MP4…'; updateSlotUI(idx);
   await muxReady;
   const total = segData.reduce((a, c) => a + (c?.byteLength || 0), 0);
   const outName = toMp4Filename(filename);
   const blob = await transmuxTsToMp4(segData);
-  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} → ${fmtBytes(blob.size)} MP4`, 'ok');
-  toast('Downloaded ' + outName);
+  const trackTag = (Slots[idx].audioType || '').toUpperCase();
+  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} → ${fmtBytes(blob.size)} MP4 · ${trackTag || 'track?'}`, 'ok');
+  toast(`Downloaded ${outName}`);
   if (AUTO_SAVE) triggerBrowserDownload(blob, outName);
   Done.unshift({
-    title: (Slots[idx].title || 'Video') + ' ' + (Slots[idx].subtitle || ''),
+    title: (Slots[idx].title || 'Video') + ' ' + (Slots[idx].subtitle || '') + (trackTag ? ` [${trackTag}]` : ''),
     filename: outName, size: blob.size, blob
   });
   DoneCount++; TotalBytes += blob.size;
