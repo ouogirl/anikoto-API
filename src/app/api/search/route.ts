@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { scrapeSearch } from '@/lib/scrapers/search.scraper';
 import { getOrSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
+import { searchLimiter, getClientIp } from '@/lib/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,31 +10,45 @@ export const dynamic = 'force-dynamic';
  * GET /api/search?keyword=<query>
  *
  * Search anime by keyword.
- *
- * Query parameters:
- *   keyword  (required) – search term
- *   refresh=1           – bypass cache
- *
- * Example:
- *   /api/search?keyword=one+piece
  */
 export async function GET(req: Request) {
   try {
+    // Abuse mitigation
+    const clientIp = getClientIp(req);
+    const limit = searchLimiter.check(clientIp);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'Too many search requests. Please slow down.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(limit.resetAfter) },
+        }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
-    const keyword = searchParams.get('keyword')?.trim();
+    const rawKeyword = searchParams.get('keyword');
     const refresh = searchParams.get('refresh') === '1';
 
-    if (!keyword) {
+    if (!rawKeyword || !rawKeyword.trim()) {
       return NextResponse.json(
         { ok: false, message: 'keyword query parameter is required' },
         { status: 400 }
       );
     }
 
-    const key = `search:${keyword.toLowerCase()}`;
+    const cleanKeyword = rawKeyword.replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 200);
+    if (!cleanKeyword) {
+      return NextResponse.json(
+        { ok: false, message: 'keyword query parameter cannot be empty' },
+        { status: 400 }
+      );
+    }
+
+    const key = `search:${cleanKeyword.toLowerCase()}`;
     const data = refresh
-      ? await scrapeSearch(keyword)
-      : await getOrSet(key, () => scrapeSearch(keyword), CACHE_TTL.SEARCH);
+      ? await scrapeSearch(cleanKeyword)
+      : await getOrSet(key, () => scrapeSearch(cleanKeyword), CACHE_TTL.SEARCH);
 
     return NextResponse.json({ ok: true, data });
   } catch (err: unknown) {

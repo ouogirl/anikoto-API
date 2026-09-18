@@ -1,7 +1,15 @@
 import NodeCache from 'node-cache';
 
-// Singleton cache instance for the entire app
-const cache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+/**
+ * Singleton cache instance with bounded maxKeys (2,500 entries)
+ * and regular cleanup (every 60s) to prevent unbounded memory growth / OOM DoS.
+ */
+const cache = new NodeCache({
+  stdTTL: 300,
+  checkperiod: 60,
+  maxKeys: 2500,
+  useClones: false, // Avoid redundant object cloning for performance
+});
 
 export default cache;
 
@@ -29,14 +37,18 @@ export async function getOrSet<T>(
   const existing = inFlight.get(key);
   if (existing) return existing as Promise<T>;
 
-  const promise = fetcher().then((fresh) => {
-    cache.set(key, fresh, ttl);
-    inFlight.delete(key);
-    return fresh;
-  }).catch((err) => {
-    inFlight.delete(key);
-    throw err;
-  });
+  const promise = fetcher()
+    .then((fresh) => {
+      if (fresh !== undefined) {
+        cache.set(key, fresh, ttl);
+      }
+      inFlight.delete(key);
+      return fresh;
+    })
+    .catch((err) => {
+      inFlight.delete(key);
+      throw err;
+    });
 
   inFlight.set(key, promise);
   return promise;
@@ -49,5 +61,22 @@ export function cacheGet<T>(key: string): T | undefined {
 
 /** Write a value directly into cache. */
 export function cacheSet<T>(key: string, value: T, ttl: number): void {
-  cache.set(key, value, ttl);
+  if (value !== undefined) {
+    cache.set(key, value, ttl);
+  }
+}
+
+/** Delete a key from cache. */
+export function cacheDel(key: string): void {
+  cache.del(key);
+  inFlight.delete(key);
+}
+
+/** Cache statistics for monitoring. */
+export function cacheStats() {
+  return {
+    ...cache.getStats(),
+    keys: cache.keys().length,
+    inFlightCount: inFlight.size,
+  };
 }

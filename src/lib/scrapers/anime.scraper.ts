@@ -63,9 +63,10 @@ function parseRelated($: cheerio.CheerioAPI, currentSlug?: string): RelatedAnime
 
 export async function scrapeAnimeDetail(
   slug: string,
-  prefetchedEpisodes?: AnimeEpisodes
+  prefetchedEpisodes?: AnimeEpisodes,
+  preloadedDoc?: cheerio.CheerioAPI
 ): Promise<AnimeDetail> {
-  const $ = await fetchPage(`/watch/${slug}`);
+  const $ = preloadedDoc ?? await fetchPage(`/watch/${slug}`);
 
   const $main = $('#watch-main');
   const animeId = $main.attr('data-id') ?? '';
@@ -74,6 +75,12 @@ export async function scrapeAnimeDetail(
   const $binfo = $('.binfo');
   const $poster = $binfo.find('.poster img');
   const $info = $binfo.find('.info');
+  const title = $info.find('h1.title').text().trim();
+
+  // If both title and animeId are missing, page is 404 or layout changed
+  if (!title && !animeId) {
+    throw new Error(`Anime not found for slug: ${slug}`);
+  }
 
   // Alternative titles
   const altRaw = $info.find('.names').text().trim();
@@ -146,16 +153,16 @@ export async function scrapeAnimeDetail(
         const relatedDoc = cheerio.load(ajaxData.result);
         related = parseRelated(relatedDoc, slug);
       }
-    } catch (err) {
-      console.error('Failed to fetch related anime in scrapeAnimeDetail:', err);
+    } catch {
+      // Optional side-channel; do not fail detail scrape
     }
   }
 
   return {
     id: animeId,
     slug,
-    title: $info.find('h1.title').text().trim(),
-    titleJp: $info.find('h1.title').attr('data-jp')?.trim(),
+    title,
+    titleJp: $info.find('h1.title').attr('data-jp')?.trim() || undefined,
     alternativeTitles,
     image: $poster.attr('src') ?? '',
     rating: $info.find('.meta.icons .rating').text().trim() || undefined,
@@ -183,17 +190,23 @@ export async function scrapeAnimeDetail(
 
 /**
  * Fetches all episodes (unfiltered) from the watch page + AJAX fallback.
- * Result is internally cached by animeId so that subsequent callers
+ * Result is internally cached by slug so that subsequent callers
  * (e.g. scrapeWatch) do not re-fetch the same data within the same TTL window.
  */
-async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
+export async function fetchAllEpisodes(slug: string, preloadedDoc?: cheerio.CheerioAPI): Promise<AnimeEpisodes> {
   const cacheKey = `anime:episodes:raw:${slug}`;
   return getOrSet(cacheKey, async () => {
-    const $ = await fetchPage(`/watch/${slug}`);
+    const $ = preloadedDoc ?? await fetchPage(`/watch/${slug}`);
     const animeId = $('#watch-main').attr('data-id') ?? '';
 
+    // If page is empty or 404
+    const pageTitle = $('h1.title').text().trim();
+    if (!animeId && !pageTitle && $('#w-episodes').length === 0) {
+      throw new Error(`Anime not found for slug: ${slug}`);
+    }
+
     // Kick off both the episode-list AJAX fallback and the watch-order (related)
-    // fetch in parallel — they are independent of each other.
+    // fetch in parallel if needed
     const episodeAjaxPromise = (async () => {
       if (animeId && $('#w-episodes a').length === 0) {
         try {
@@ -202,20 +215,17 @@ async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
             const ajaxDoc = cheerio.load(data.result);
             $('#w-episodes').html(ajaxDoc.html());
           }
-        } catch (err) {
-          console.error('Failed to fetch episodes via AJAX:', err);
+        } catch {
+          // Keep existing page markup
         }
       }
     })();
 
     const watchOrderPromise = animeId
-      ? fetchJson<{ status: number; result: string }>(`/api/watch-order/${animeId}`).catch((err) => {
-          console.error('Failed to fetch related anime in fetchAllEpisodes:', err);
-          return null;
-        })
+      ? fetchJson<{ status: number; result: string }>(`/api/watch-order/${animeId}`).catch(() => null)
       : Promise.resolve(null);
 
-    // Wait for episode AJAX to finish before parsing (it mutates the cheerio tree)
+    // Wait for episode AJAX to finish before parsing
     await episodeAjaxPromise;
 
     const allEpisodes: Episode[] = [];
@@ -224,7 +234,6 @@ async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
     $('#w-episodes ul.ep-range li a, #w-episodes a[href], #w-episodes a[data-num]').each((_, el) => {
       const $el = $(el);
       const href = $el.attr('href') ?? '';
-      // Sometimes it's an anchor without href but with data-num on the watch page
       if (!href.includes('/watch/') && !$el.attr('data-num')) return;
 
       const epNum = $el.attr('data-num')
@@ -245,7 +254,7 @@ async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
       });
     });
 
-    // Resolve the already-in-flight watch-order request
+    // Resolve watch-order request
     let related: RelatedAnime[] = [];
     const ajaxData = await watchOrderPromise;
     if (ajaxData && ajaxData.status === 200 && ajaxData.result) {
@@ -260,16 +269,17 @@ async function fetchAllEpisodes(slug: string): Promise<AnimeEpisodes> {
 export async function scrapeAnimeEpisodes(
   slug: string,
   startEpisode?: number,
-  endEpisode?: number
+  endEpisode?: number,
+  preloadedDoc?: cheerio.CheerioAPI
 ): Promise<AnimeEpisodes> {
-  const { animeId, episodes: allEpisodes, related } = await fetchAllEpisodes(slug);
+  const { animeId, episodes: allEpisodes, related } = await fetchAllEpisodes(slug, preloadedDoc);
 
   // Apply range filtering if startEpisode and endEpisode are provided
   let filteredEpisodes = allEpisodes;
   if (startEpisode !== undefined && endEpisode !== undefined) {
     filteredEpisodes = allEpisodes.filter((ep) => {
       const num = parseInt(ep.number, 10);
-      return num >= startEpisode && num <= endEpisode;
+      return !isNaN(num) && num >= startEpisode && num <= endEpisode;
     });
   }
 

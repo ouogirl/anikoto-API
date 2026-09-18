@@ -1,9 +1,24 @@
 import { NextResponse } from 'next/server';
 import { scrapeAnimeDetail, scrapeAnimeEpisodes } from '@/lib/scrapers/anime.scraper';
+import { fetchPage } from '@/lib/fetcher';
 import { getOrSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
+import { isValidSlug, parseBoundedInt } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Fetch anime detail and episodes using a single page fetch to eliminate
+ * redundant network roundtrips.
+ */
+async function fetchAndCombine(slug: string, startEpisode?: number, endEpisode?: number) {
+  const $ = await fetchPage(`/watch/${slug}`);
+  const episodes = await scrapeAnimeEpisodes(slug, startEpisode, endEpisode, $);
+  const detail = await scrapeAnimeDetail(slug, episodes, $);
+  const episodesWithoutRelated = { ...episodes };
+  delete episodesWithoutRelated.related;
+  return { ...detail, episodes: episodesWithoutRelated };
+}
 
 /**
  * GET /api/anime/[slug]
@@ -11,13 +26,8 @@ export const dynamic = 'force-dynamic';
  * Returns detail info for an anime: title, synopsis, genres, studios,
  * MAL score, episode count, status, etc.
  *
- * Supports optional episode range filter (same as /episodes endpoint):
+ * Supports optional episode range filter:
  *   ?start=1&end=12
- *
- * Examples:
- *   /api/anime/haibara-s-teenage-new-game-8axzw
- *   /api/anime/one-piece-odmau
- *   /api/anime/one-piece-odmau?start=1&end=50
  */
 export async function GET(
   req: Request,
@@ -25,32 +35,37 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    if (!slug) {
-      return NextResponse.json({ ok: false, message: 'slug is required' }, { status: 400 });
+    if (!slug || !isValidSlug(slug)) {
+      return NextResponse.json(
+        { ok: false, message: 'Invalid or missing slug parameter' },
+        { status: 400 }
+      );
     }
 
     const { searchParams } = new URL(req.url);
     const refresh = searchParams.get('refresh') === '1';
 
     // Handle optional episode range parameters
-    const start = searchParams.get('start');
-    const end = searchParams.get('end');
+    const startRaw = searchParams.get('start');
+    const endRaw = searchParams.get('end');
 
     let startEpisode: number | undefined;
     let endEpisode: number | undefined;
 
-    if (start || end) {
-      if (!start || !end) {
+    if (startRaw !== null || endRaw !== null) {
+      if (startRaw === null || endRaw === null) {
         return NextResponse.json(
           { ok: false, message: 'Both start and end are required when filtering by episode range.' },
           { status: 400 }
         );
       }
-      const s = parseInt(start, 10);
-      const e = parseInt(end, 10);
-      if (isNaN(s) || isNaN(e) || s <= 0 || e <= 0 || s > e) {
+
+      const s = parseBoundedInt(startRaw, 1, 10000);
+      const e = parseBoundedInt(endRaw, 1, 10000);
+
+      if (s === null || e === null || s > e) {
         return NextResponse.json(
-          { ok: false, message: 'Invalid episode range. start and end must be positive integers with start <= end.' },
+          { ok: false, message: 'Invalid episode range. start and end must be integers between 1 and 10000 with start <= end.' },
           { status: 400 }
         );
       }
@@ -68,24 +83,10 @@ export async function GET(
     return NextResponse.json({ ok: true, data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.toLowerCase().includes('not found')) {
+      return NextResponse.json({ ok: false, message: 'Anime not found' }, { status: 404 });
+    }
     console.error('[GET /api/anime/[slug]]', message);
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
-}
-
-/**
- * Fetch anime detail and episodes in parallel.
- * Episodes are fetched first (cached internally), then passed to scrapeAnimeDetail
- * so it doesn't perform a second redundant scrape.
- */
-async function fetchAndCombine(slug: string, startEpisode?: number, endEpisode?: number) {
-  // Fetch episodes (which internally caches the raw unfiltered list) and detail concurrently.
-  // scrapeAnimeDetail will reuse the cached raw episodes via fetchAllEpisodes.
-  const [episodes, detail] = await Promise.all([
-    scrapeAnimeEpisodes(slug, startEpisode, endEpisode),
-    scrapeAnimeDetail(slug),
-  ]);
-  const episodesWithoutRelated = { ...episodes };
-  delete episodesWithoutRelated.related;
-  return { ...detail, episodes: episodesWithoutRelated };
 }

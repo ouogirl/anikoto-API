@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { scrapeListingPage } from '@/lib/scrapers/search.scraper';
 import { getOrSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
+import { parseBoundedInt } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,30 +18,25 @@ const STATUS_PATHS: Record<StatusType, string> = {
  * GET /api/status?type=<type>&page=<n>
  *
  * Returns anime by airing status.
- *
- * Query parameters:
- *   type  – currently-airing | finished-airing | not-yet-aired  (default: currently-airing)
- *   page  – page number (default: 1)
- *
- * Example:
- *   /api/status?type=currently-airing&page=1
  */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const type = (searchParams.get('type') ?? 'currently-airing') as StatusType;
-    const page = parseInt(searchParams.get('page') ?? '1', 10);
-    const refresh = searchParams.get('refresh') === '1';
+    const rawType = (searchParams.get('type') ?? 'currently-airing').toLowerCase().trim() as StatusType;
 
-    if (!STATUS_PATHS[type]) {
+    if (!STATUS_PATHS[rawType]) {
       return NextResponse.json(
         { ok: false, message: `type must be one of: ${Object.keys(STATUS_PATHS).join(', ')}` },
         { status: 400 }
       );
     }
 
-    const key = `status:${type}:${page}`;
-    const path = STATUS_PATHS[type];
+    const rawPage = searchParams.get('page');
+    const page = parseBoundedInt(rawPage, 1, 1000, 1) ?? 1;
+    const refresh = searchParams.get('refresh') === '1';
+
+    const key = `status:${rawType}:${page}`;
+    const path = STATUS_PATHS[rawType];
 
     const data = refresh
       ? await scrapeListingPage(path, page)

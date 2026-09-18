@@ -6,6 +6,7 @@ import {
 } from '@/lib/scrapers/watch.scraper';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
+import { isValidSlug, isValidEpisodeNum } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,14 +17,11 @@ export const dynamic = 'force-dynamic';
  *
  * Behaviour:
  * - Cache warm  → instant JSON response  { ok: true, data, streaming: false }
- * - Cache cold  → SSE streaming response (text/event-stream); chunks arrive progressively:
- *     1. data: { "type": "episode", "episode": {...} }          — after ~1 upstream RTT
- *     2. data: { "type": "servers", "servers": [...] }          — after ~2 upstream RTTs
- *     3. data: { "type": "source",  "source": {...} }  (×N)    — as each server resolves
- *     4. data: { "type": "done" }                               — stream closed; result cached
+ * - Cache cold  → SSE streaming response (text/event-stream)
  *
- * Add ?refresh=1 to bypass cache and force a fresh stream.
- * Add ?stream=false to disable streaming and return full JSON response.
+ * Query params:
+ *   ?refresh=1    Bypass cache and force a fresh stream
+ *   ?stream=false Disable streaming and return full JSON response
  */
 export async function GET(
   req: Request,
@@ -37,8 +35,18 @@ export async function GET(
     const refresh = searchParams.get('refresh') === '1';
     const isStream = searchParams.get('stream') !== 'false';
 
-    if (!slug) {
-      return Response.json({ ok: false, message: 'Missing slug' }, { status: 400 });
+    if (!slug || !isValidSlug(slug)) {
+      return Response.json(
+        { ok: false, message: 'Invalid or missing slug parameter' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEpisodeNum(epNum)) {
+      return Response.json(
+        { ok: false, message: 'Invalid episode parameter' },
+        { status: 400 }
+      );
     }
 
     const cacheKey = `watch:${slug}:${epNum}`;
@@ -54,10 +62,19 @@ export async function GET(
 
     // ── Non-streaming response: wait for all chunks and return JSON ──────────
     if (!isStream) {
-      const data = await scrapeWatch(slug, epNum);
-      cacheSet(cacheKey, data, CACHE_TTL.EPISODE);
-      refreshSourceTokens(data);
-      return Response.json({ ok: true, data, streaming: false });
+      try {
+        const data = await scrapeWatch(slug, epNum);
+        cacheSet(cacheKey, data, CACHE_TTL.EPISODE);
+        refreshSourceTokens(data);
+        return Response.json({ ok: true, data: data, streaming: false });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        const isNotFound = message.toLowerCase().includes('not found');
+        return Response.json(
+          { ok: false, message },
+          { status: isNotFound ? 404 : 500 }
+        );
+      }
     }
 
     // ── Cache miss (or forced refresh): stream the response as SSE ────────────
@@ -68,11 +85,6 @@ export async function GET(
         const collectedSources: WatchData['sources'] = [];
         let episode: WatchData['episode'] | undefined;
         let servers: WatchData['servers'] = [];
-
-        // The client can disappear at any moment (tab closed, fetch aborted,
-        // StreamVault "cancel" button). Writing to a closed controller throws
-        // "Invalid state: Controller is already closed", so track the state
-        // ourselves and stop pulling from the generator as soon as that happens.
         let closed = false;
 
         const send = (payload: unknown): boolean => {
@@ -81,7 +93,6 @@ export async function GET(
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
             return true;
           } catch {
-            // Reader went away between our check and the write.
             closed = true;
             return false;
           }
@@ -98,7 +109,7 @@ export async function GET(
 
         const generator = scrapeWatchStream(slug, epNum)[Symbol.asyncIterator]();
 
-        // Upstream work should stop the moment the client hangs up.
+        // Upstream work stops the moment client hangs up
         const stop = () => {
           closed = true;
           void generator.return?.(undefined).catch(() => undefined);
@@ -111,7 +122,6 @@ export async function GET(
             if (done) break;
             if (!send(chunk)) break;
 
-            // Accumulate data to cache when complete
             if (chunk.type === 'episode') {
               episode = chunk.episode;
             } else if (chunk.type === 'servers') {
@@ -119,7 +129,6 @@ export async function GET(
             } else if (chunk.type === 'source') {
               collectedSources.push(chunk.source);
             } else if (chunk.type === 'done') {
-              // Persist completed result so the next request is an instant cache hit
               if (episode) {
                 const fullData: WatchData = { episode, servers, sources: collectedSources };
                 cacheSet(cacheKey, fullData, CACHE_TTL.EPISODE);
@@ -148,12 +157,13 @@ export async function GET(
         'Cache-Control': 'no-cache, no-transform',
         'Connection': 'keep-alive',
         'Transfer-Encoding': 'chunked',
-        'X-Accel-Buffering': 'no', // Disable Nginx/proxy buffering
+        'X-Accel-Buffering': 'no',
       },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    const isNotFound = message.toLowerCase().includes('not found');
     console.error(`[GET /api/watch]`, message);
-    return Response.json({ ok: false, message }, { status: 500 });
+    return Response.json({ ok: false, message }, { status: isNotFound ? 404 : 500 });
   }
 }

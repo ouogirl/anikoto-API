@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import { DEFAULT_HEADERS } from './constants';
+import { validateSafeUrl } from './security';
 
 const KIWI_MAPPER_URLS = [
   'https://mapper.nekostream.site/api/mal',
@@ -12,6 +13,9 @@ async function parseM3u8Subtitles(
   referer: string
 ): Promise<{ file: string; label?: string; kind?: string; default?: boolean }[]> {
   try {
+    const check = await validateSafeUrl(m3u8Url);
+    if (!check.safe) return [];
+
     const { data } = await axios.get<string>(m3u8Url, {
       headers: { ...DEFAULT_HEADERS, Referer: referer },
       timeout: 5000,
@@ -55,13 +59,18 @@ const KEYS_CACHE_MS = 15 * 60 * 1000;
 async function getMegacloudKeys(): Promise<Record<string, string>> {
   const now = Date.now();
   if (_keysCache && now - _keysCacheAt < KEYS_CACHE_MS) return _keysCache;
-  const { data } = await axios.get<Record<string, string>>(
-    'https://raw.githubusercontent.com/yogesh-hacker/MegacloudKeys/refs/heads/main/keys.json',
-    { timeout: 5000 }
-  );
-  _keysCache = data;
-  _keysCacheAt = now;
-  return data;
+  try {
+    const { data } = await axios.get<Record<string, string>>(
+      'https://raw.githubusercontent.com/yogesh-hacker/MegacloudKeys/refs/heads/main/keys.json',
+      { timeout: 5000 }
+    );
+    _keysCache = data;
+    _keysCacheAt = now;
+    return data;
+  } catch (err) {
+    console.error('[getMegacloudKeys] Failed to fetch Megacloud keys:', err instanceof Error ? err.message : err);
+    return _keysCache || {};
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -451,6 +460,9 @@ async function megaplayScriptKeyPairs(
 
 export async function extractMegaplay(embedUrl: string): Promise<ExtractedStream | null> {
   try {
+    const check = await validateSafeUrl(embedUrl);
+    if (!check.safe) return null;
+
     const host = new URL(embedUrl).host;
     const referer = 'https://' + host + '/';
     const { data: html } = await axios.get<string>(embedUrl, {
@@ -663,6 +675,9 @@ export async function extractVidstream(
   referer: string
 ): Promise<ExtractedStream | null> {
   try {
+    const check = await validateSafeUrl(embedUrl);
+    if (!check.safe) return null;
+
     const { data: html } = await axios.get<string>(embedUrl, {
       headers: { ...DEFAULT_HEADERS, Referer: referer },
       timeout: 8000,
@@ -740,16 +755,23 @@ async function _doMegacloud(
     `&nonce=${encodeURIComponent(nonce)}` +
     `&secret=${encodeURIComponent(secret)}`;
 
-  const { data: decrypted } = await axios.get(decryptUrl, { timeout: 5000 });
-
-  const m3u8 = (typeof decrypted === 'string' ? decrypted : JSON.stringify(decrypted)).match(
-    /"file":"(.*?)"/
-  )?.[1];
-  return m3u8 ? { m3u8, referer, tracks } : null;
+  try {
+    const { data: decrypted } = await axios.get(decryptUrl, { timeout: 5000 });
+    const m3u8 = (typeof decrypted === 'string' ? decrypted : JSON.stringify(decrypted)).match(
+      /"file":"(.*?)"/
+    )?.[1];
+    return m3u8 ? { m3u8, referer, tracks } : null;
+  } catch (err) {
+    console.error('Megacloud remote decrypt failed:', err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
 export async function extractMegacloud(embedUrl: string): Promise<ExtractedStream | null> {
   try {
+    const check = await validateSafeUrl(embedUrl);
+    if (!check.safe) return null;
+
     const origin = new URL(embedUrl).origin;
     const referer = origin + '/';
     const { data: html } = await axios.get<string>(embedUrl, {
@@ -764,6 +786,9 @@ export async function extractMegacloud(embedUrl: string): Promise<ExtractedStrea
 }
 
 export async function extractStreamUrl(embedUrl: string): Promise<ExtractedStream | null> {
+  const check = await validateSafeUrl(embedUrl);
+  if (!check.safe) return null;
+
   const hostname = new URL(embedUrl).hostname;
 
   if (

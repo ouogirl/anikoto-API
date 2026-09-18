@@ -606,6 +606,21 @@ const spec = {
             schema: { type: "string" },
             example: "1",
           },
+          {
+            name: "stream",
+            in: "query",
+            required: false,
+            description: "Set to false to return full JSON response instead of SSE stream",
+            schema: { type: "string", enum: ["false", "true"] },
+            example: "false",
+          },
+          {
+            name: "refresh",
+            in: "query",
+            required: false,
+            description: "Set to 1 to bypass cache and force a fresh scrape",
+            schema: { type: "string", enum: ["1"] },
+          },
         ],
         responses: {
           "200": {

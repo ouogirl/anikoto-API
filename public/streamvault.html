@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StreamVault</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>↓</text></svg>">
 <style>
   /* Professional utility UI — pink/purple accents on neutral base, 0 radius */
@@ -34,8 +31,8 @@
     --bad-bg: #fdeceb;
     --focus: rgba(109, 63, 168, 0.2);
     --shadow: 0 1px 2px rgba(31, 21, 40, 0.04);
-    --font: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --mono: "IBM Plex Mono", "SF Mono", ui-monospace, Consolas, monospace;
+    --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     --space: 12px;
     --w: 960px;
   }
@@ -747,9 +744,8 @@
 
 <script>
 /* StreamVault v6.5 — faster path, same max quality, simpler UI */
-const ORIGIN = window.location.origin;
-const IS_DEPLOYED = /vercel\.app|onrender\.com|localhost|127\.0\.0\.1/.test(ORIGIN);
-let API = IS_DEPLOYED ? '' : 'https://anikoto-api-hte0.onrender.com';
+const ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
+let API = '';
 let CF_WORKER = '';
 let AUTO_SAVE = true;
 let SEG_CONCURRENCY = 10;
@@ -830,15 +826,33 @@ function fmtETA(s) {
   if (s < 3600) return Math.floor(s / 60) + 'm ' + Math.round(s % 60) + 's';
   return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
 }
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function sanitizeFilename(n) {
-  return n.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_').substring(0, 80);
+  if (!n) return 'video';
+  return String(n)
+    .replace(/[/\\]/g, '_')
+    .replace(/[\x00-\x1f\x7f]/g, '')
+    .replace(/[<>:"|?*]/g, '_')
+    .replace(/\.{2,}/g, '.')
+    .replace(/\s+/g, '_')
+    .trim()
+    .substring(0, 80) || 'video';
 }
 
 function log(msg, type = 'info') {
   const el = $('logBox');
   const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
   const line = document.createElement('div');
-  line.innerHTML = `<span>${ts}</span> <span class="${type}">${msg}</span>`;
+  line.innerHTML = `<span>${escapeHtml(ts)}</span> <span class="${escapeHtml(type)}">${escapeHtml(msg)}</span>`;
   el.appendChild(line);
   while (el.childElementCount > 400) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
@@ -1005,27 +1019,6 @@ async function smartFetch(idx, targetUrl, referer, { isSegment = false, signal }
     }
   }
 
-  // Manifest-only public CORS fallback (slow; rarely needed)
-  if (!isSegment) {
-    for (const cand of candidates) {
-      for (const m of [
-        `https://corsproxy.io/?${encodeURIComponent(cand)}`,
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(cand)}`
-      ]) {
-        try {
-          const r = await fetch(m, { signal });
-          if (!r.ok) continue;
-          const t = await r.text();
-          if (looksLikeM3u8(t)) {
-            return new Response(rewritePlaylistHosts(t, CDN_MIRROR_HOSTS[0]), {
-              status: 200, headers: { 'Content-Type': 'application/vnd.apple.mpegurl' }
-            });
-          }
-        } catch (e) { if (signal?.aborted) throw e; }
-      }
-    }
-  }
-
   throw new Error(`All paths failed (${errors.slice(0, 4).join(' | ')})`);
 }
 
@@ -1099,10 +1092,10 @@ function updateSlotUI(idx) {
   $('t' + idx).textContent = s.title || '—';
   $('u' + idx).textContent = s.subtitle || '';
   let chips = '';
-  if (s.audioType) chips += `<span class="chip pink">${s.audioType}</span>`;
-  if (s.serverName) chips += `<span class="chip">${s.serverName}</span>`;
-  if (s.via) chips += `<span class="chip">${s.via}</span>`;
-  if (s.quality) chips += `<span class="chip pink">${s.quality}</span>`;
+  if (s.audioType) chips += `<span class="chip pink">${escapeHtml(s.audioType)}</span>`;
+  if (s.serverName) chips += `<span class="chip">${escapeHtml(s.serverName)}</span>`;
+  if (s.via) chips += `<span class="chip">${escapeHtml(s.via)}</span>`;
+  if (s.quality) chips += `<span class="chip pink">${escapeHtml(s.quality)}</span>`;
   $('bg' + idx).innerHTML = chips;
   const pct = s.segTotal ? (s.segDone / s.segTotal * 100) : (s.totalSize ? s.downloaded / s.totalSize * 100 : 0);
   $('p' + idx).style.width = Math.min(pct, 100) + '%';
@@ -1120,8 +1113,8 @@ function renderQ() {
   const el = $('qEl');
   if (!Q.length) { el.innerHTML = '<div class="empty" style="padding:18px">No queued items</div>'; return; }
   el.innerHTML = Q.map((q, i) => {
-    const retry = q._requeues ? ` · retry ${q._requeues}` : '';
-    return `<div class="list-item"><span>${q.title}${retry}</span><button class="btn-tiny" type="button" onclick="Q.splice(${i},1);renderQ()">✕</button></div>`;
+    const retry = q._requeues ? ` · retry ${escapeHtml(q._requeues)}` : '';
+    return `<div class="list-item"><span>${escapeHtml(q.title)}${retry}</span><button class="btn-tiny" type="button" onclick="Q.splice(${i},1);renderQ()">✕</button></div>`;
   }).join('');
 }
 
@@ -1129,7 +1122,7 @@ function renderDone() {
   const el = $('dEl');
   if (!Done.length) { el.innerHTML = '<div class="empty" style="padding:18px">No completed files</div>'; return; }
   el.innerHTML = Done.map((d, i) =>
-    `<div class="list-item"><span>✓ ${d.title} <span style="color:var(--muted)">${fmtBytes(d.size)}</span></span>${d.blob ? `<button class="btn-tiny" type="button" onclick="redownload(${i})">Save</button>` : ''}</div>`
+    `<div class="list-item"><span>✓ ${escapeHtml(d.title)} <span style="color:var(--muted)">${fmtBytes(d.size)}</span></span>${d.blob ? `<button class="btn-tiny" type="button" onclick="redownload(${i})">Save</button>` : ''}</div>`
   ).join('');
 }
 
@@ -1730,10 +1723,17 @@ async function downloadHLS(idx, m3u8Url, referer, filename, signal) {
   Slots[idx].status = 'Building MP4…'; updateSlotUI(idx);
   await muxReady;
   const total = segData.reduce((a, c) => a + (c?.byteLength || 0), 0);
-  const outName = toMp4Filename(filename);
-  const blob = await transmuxTsToMp4(segData);
+  let blob, outName;
+  try {
+    blob = await transmuxTsToMp4(segData);
+    outName = toMp4Filename(filename);
+  } catch (err) {
+    log(`Slot ${idx + 1}: MP4 transmux unavailable (${escapeHtml(err.message)}) — saving raw TS`, 'warn');
+    blob = new Blob(segData.filter(b => b?.byteLength), { type: 'video/mp2t' });
+    outName = filename.toLowerCase().endsWith('.ts') ? filename : filename + '.ts';
+  }
   const trackTag = (Slots[idx].audioType || '').toUpperCase();
-  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} → ${fmtBytes(blob.size)} MP4 · ${trackTag || 'track?'}`, 'ok');
+  log(`Slot ${idx + 1}: OK ${fmtBytes(total)} → ${fmtBytes(blob.size)} ${outName.endsWith('.mp4') ? 'MP4' : 'TS'} · ${trackTag || 'track?'}`, 'ok');
   toast(`Downloaded ${outName}`);
   if (AUTO_SAVE) triggerBrowserDownload(blob, outName);
   Done.unshift({

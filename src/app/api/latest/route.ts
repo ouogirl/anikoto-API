@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { scrapeListingPage } from '@/lib/scrapers/search.scraper';
 import { getOrSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
+import { parseBoundedInt } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,20 +18,12 @@ const LISTING_PATHS: Record<Listing, string> = {
  * GET /api/latest?type=<type>&page=<n>
  *
  * Returns paginated anime listing pages.
- *
- * Query parameters:
- *   type  – latest-updated | new-release | most-viewed  (default: latest-updated)
- *   page  – page number (default: 1)
- *
- * Example:
- *   /api/latest?type=most-viewed&page=2
  */
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const type = (searchParams.get('type') ?? 'latest-updated') as Listing;
-    const page = parseInt(searchParams.get('page') ?? '1', 10);
-    const refresh = searchParams.get('refresh') === '1';
+    const rawType = searchParams.get('type') ?? 'latest-updated';
+    const type = rawType as Listing;
 
     if (!LISTING_PATHS[type]) {
       return NextResponse.json(
@@ -38,6 +31,10 @@ export async function GET(req: Request) {
         { status: 400 }
       );
     }
+
+    const rawPage = searchParams.get('page');
+    const page = parseBoundedInt(rawPage, 1, 1000, 1) ?? 1;
+    const refresh = searchParams.get('refresh') === '1';
 
     const key = `listing:${type}:${page}`;
     const path = LISTING_PATHS[type];
