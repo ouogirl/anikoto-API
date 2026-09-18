@@ -2,7 +2,7 @@ import * as cheerio from 'cheerio';
 import { fetchJson } from '../fetcher';
 import { scrapeAnimeEpisodes } from './anime.scraper';
 import { Episode } from '../types';
-import { extractStreamUrl, extractKiwiMapper, extractVidstream, SubtitleTrack } from '../extractors';
+import { extractStreamUrl, extractKiwiMapper, extractVidstream, refreshMegaplayToken, SubtitleTrack } from '../extractors';
 import { BASE_URL } from '../constants';
 
 export interface VideoServer {
@@ -24,6 +24,10 @@ export interface VideoSource {
   referer?: string; // Required referer for the m3u8 stream
   proxyUrl?: string | null; // The URL to proxy the stream through our backend
   tracks?: VideoTrack[];
+  /** Direct per-quality download links when a source has no HLS stream (Kiwi mapper). */
+  downloads?: Record<string, string>;
+  /** True when the source could not be resolved to a playable m3u8. */
+  unresolved?: boolean;
 }
 
 export interface WatchData {
@@ -63,8 +67,32 @@ export type WatchStreamChunk =
   | WatchStreamSource
   | WatchStreamDone;
 
-/** Cap individual server fetch+extraction so a single slow server can't block everything. */
-const SERVER_TIMEOUT_MS = 8000;
+/**
+ * Player tokens are minted with a ~90s lifetime while watch results are cached
+ * for 10 minutes. Re-sign them on the way out so cached responses stay playable.
+ */
+export function refreshSourceTokens(data: WatchData | null | undefined): void {
+  if (!data?.sources) return;
+  for (const source of data.sources) {
+    if (!source.m3u8) continue;
+    const before = source.m3u8;
+    const after = refreshMegaplayToken(before);
+    if (!after || after === before) continue;
+    source.m3u8 = after;
+    if (source.proxyUrl) {
+      source.proxyUrl = source.proxyUrl
+        .split(encodeURIComponent(before)).join(encodeURIComponent(after))
+        .split(before).join(after);
+    }
+  }
+}
+
+/**
+ * Cap individual server fetch+extraction so a single slow server can't block
+ * everything. MegaPlay resolution now needs an embed fetch, a getSources call
+ * and (for encrypted payloads) a playlist liveness probe — keep some headroom.
+ */
+const SERVER_TIMEOUT_MS = 15000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -109,17 +137,21 @@ function buildSourceTasks(
           `Kiwi Mapper (${type})`
         ).then((extracted): VideoSource | null => {
           if (!extracted) return null;
+          const m3u8 = extracted.m3u8 || null;
+          const bestDownload = extracted.downloads ? Object.values(extracted.downloads)[0] ?? null : null;
           return {
             server: 'Kiwi Stream',
             type,
-            url: extracted.m3u8,
-            m3u8: extracted.m3u8,
+            url: m3u8 ?? bestDownload ?? '',
+            m3u8,
             referer: extracted.referer,
-            proxyUrl: getProxyUrl(extracted.m3u8, extracted.referer),
+            proxyUrl: m3u8 ? getProxyUrl(m3u8, extracted.referer) : null,
             tracks: extracted.tracks?.map((t) => ({
               ...t,
               proxyUrl: getProxyUrl(t.file, extracted.referer),
             })) || [],
+            downloads: extracted.downloads,
+            unresolved: !m3u8,
           };
         }).catch((err) => {
           console.error(`Skipping Kiwi Mapper (${type}):`, err instanceof Error ? err.message : err);
@@ -266,8 +298,7 @@ export async function* scrapeWatchStream(
   type Tagged = Promise<{ source: VideoSource | null; self: Tagged }>;
   const pending = new Set<Tagged>();
   for (const task of tasks) {
-    let tagged!: Tagged;
-    tagged = task.then((source) => ({ source, self: tagged }));
+    const tagged: Tagged = task.then((source) => ({ source, self: tagged }));
     pending.add(tagged);
   }
 

@@ -1,4 +1,9 @@
-import { scrapeWatchStream, scrapeWatch, WatchData } from '@/lib/scrapers/watch.scraper';
+import {
+  scrapeWatchStream,
+  scrapeWatch,
+  refreshSourceTokens,
+  WatchData,
+} from '@/lib/scrapers/watch.scraper';
 import { cacheGet, cacheSet } from '@/lib/cache';
 import { CACHE_TTL } from '@/lib/constants';
 
@@ -42,6 +47,7 @@ export async function GET(
     if (!refresh) {
       const cached = cacheGet<WatchData>(cacheKey);
       if (cached !== undefined) {
+        refreshSourceTokens(cached);
         return Response.json({ ok: true, data: cached, streaming: false });
       }
     }
@@ -50,6 +56,7 @@ export async function GET(
     if (!isStream) {
       const data = await scrapeWatch(slug, epNum);
       cacheSet(cacheKey, data, CACHE_TTL.EPISODE);
+      refreshSourceTokens(data);
       return Response.json({ ok: true, data, streaming: false });
     }
 
@@ -62,10 +69,47 @@ export async function GET(
         let episode: WatchData['episode'] | undefined;
         let servers: WatchData['servers'] = [];
 
+        // The client can disappear at any moment (tab closed, fetch aborted,
+        // StreamVault "cancel" button). Writing to a closed controller throws
+        // "Invalid state: Controller is already closed", so track the state
+        // ourselves and stop pulling from the generator as soon as that happens.
+        let closed = false;
+
+        const send = (payload: unknown): boolean => {
+          if (closed) return false;
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+            return true;
+          } catch {
+            // Reader went away between our check and the write.
+            closed = true;
+            return false;
+          }
+        };
+
+        const closeStream = () => {
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            /* runtime already closed it */
+          }
+        };
+
+        const generator = scrapeWatchStream(slug, epNum)[Symbol.asyncIterator]();
+
+        // Upstream work should stop the moment the client hangs up.
+        const stop = () => {
+          closed = true;
+          void generator.return?.(undefined).catch(() => undefined);
+        };
+        req.signal?.addEventListener?.('abort', stop);
+
         try {
-          for await (const chunk of scrapeWatchStream(slug, epNum)) {
-            // Forward each chunk in SSE format
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+          while (!closed) {
+            const { value: chunk, done } = await generator.next();
+            if (done) break;
+            if (!send(chunk)) break;
 
             // Accumulate data to cache when complete
             if (chunk.type === 'episode') {
@@ -85,11 +129,15 @@ export async function GET(
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           console.error(`[GET /api/watch stream]`, message);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'error', ok: false, message })}\n\n`)
-          );
+          send({ type: 'error', ok: false, message });
         } finally {
-          controller.close();
+          req.signal?.removeEventListener?.('abort', stop);
+          try {
+            await generator.return?.(undefined);
+          } catch {
+            /* generator already finished */
+          }
+          closeStream();
         }
       },
     });
