@@ -2,7 +2,7 @@
 "use client";
 
 import spec from "@/lib/openapi-spec";
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 
 // Tag colours
 const TAG_COLORS: Record<string, string> = {
@@ -33,11 +33,13 @@ export default function DocsPage() {
     data: unknown;
     loading: boolean;
   } | null>(null);
-  const [origin, setOrigin] = useState<string>("https://anikoto-scrap-api.vercel.app");
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
+  // Window origin is only known in the browser; useSyncExternalStore gives us a
+  // server snapshot for SSR/hydration and the real origin once mounted.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "https://anikoto-scrap-api.vercel.app"
+  );
 
   if (activePath !== prevActivePath) {
     setPrevActivePath(activePath);
@@ -137,6 +139,9 @@ export default function DocsPage() {
           <div className="sidebar-badge">REST API · v1.0</div>
           <h1 className="sidebar-title">Anikoto Scraper</h1>
           <p className="sidebar-sub">anikoto.net · Next.js · Cheerio</p>
+          <a className="sidebar-link" href="/streamvault.html">
+            Open StreamVault downloader →
+          </a>
         </div>
 
         <nav className="sidebar-nav">
@@ -425,6 +430,24 @@ const CSS = `
   .sidebar-sub {
     font-size: 11px;
     color: #475569;
+  }
+
+  .sidebar-link {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a5b4fc;
+    text-decoration: none;
+    border: 1px solid rgba(165, 180, 252, 0.35);
+    border-radius: 999px;
+    padding: 5px 10px;
+  }
+
+  .sidebar-link:hover {
+    color: #e0e7ff;
+    border-color: rgba(165, 180, 252, 0.75);
+    background: rgba(99, 102, 241, 0.12);
   }
 
   .sidebar-nav {

@@ -91,6 +91,31 @@ Add `?refresh=1` to force a fresh scrape.
 
 ---
 
+## 🎛️ Stream resolution settings (optional)
+
+`/api/watch/:slug` resolves the site's players (MegaPlay `Vidstream-*` / `HD-1` servers, the Kiwi mapper side-channel, MegaCloud/VidStream embeds) into direct `m3u8` URLs. MegaPlay rotates its player crypto from time to time — the defaults below track the current bundle and can be overridden via environment variables if it rotates again:
+
+```env
+# AES key/IV used to decrypt the player's `enc` payload (defaults match the live bundle)
+MEGAPLAY_AES_KEY=i?LMTAx0Q6,:}50U
+MEGAPLAY_AES_IV=W0;27ToaUpl_P%'c
+# HMAC secret used to mint the short-lived `token=` on path-locked CDN URLs
+MEGAPLAY_TOKEN_SECRET=MpCdnT0k3n!9f2K#xQ7vL5mR8wN1pY4s
+# Token lifetime in seconds (default 90; tokens are re-signed automatically while cached)
+MEGAPLAY_TOKEN_TTL_SECONDS=90
+# Verbose per-request resolution logs
+DEBUG_MEGAPLAY=1
+```
+
+Notes:
+
+- Sources that could not be resolved to an m3u8 come back with `"m3u8": null`, `"unresolved": true` and (when the Kiwi mapper only offers downloads) a `"downloads": { "1080p": "…" }` map.
+- Mapper mirrors are raced in parallel; `mapper.mewcdn.online` is currently down and only kept as a fallback, so a `502` line in the logs is expected.
+
+The bundled download client is served at **`/streamvault.html`** (alias: `/streamvault`).
+
+---
+
 ## ☁️ Cloudflare Worker Proxy (Optional)
 
 By default, the API provides an internal streaming proxy at `/api/proxy` to bypass CORS. For better performance and free unlimited bandwidth (100k req/day free tier), you can deploy the included Cloudflare Worker and configure the API to use it automatically.
